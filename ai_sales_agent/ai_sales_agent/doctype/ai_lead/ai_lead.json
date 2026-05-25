@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-22 15:17:03.196055",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "human_input_fields_form_se_section",
+  "lead_name",
+  "email",
+  "company",
+  "source",
+  "intent_type",
+  "message",
+  "create_at",
+  "ai_output_fields_section",
+  "intent_confidence",
+  "icp_score",
+  "lead_category",
+  "ai_reason",
+  "processed_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "human_input_fields_form_se_section",
+   "fieldtype": "Section Break",
+   "label": "Human Input Fields (Form se)"
+  },
+  {
+   "fieldname": "lead_name",
+   "fieldtype": "Data",
+   "label": "Lead Name"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Data",
+   "label": "Company"
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "options": "Website\nWhatsApp\nFacebook\nInstagram\nEmail\nPhone\nManual"
+  },
+  {
+   "fieldname": "intent_type",
+   "fieldtype": "Select",
+   "label": "Intent Type",
+   "options": "Pricing Inquiry\nProduct Inquiry\nSupport Request\nDemo Request\nBilling Inquiry\nComplaint\nPartnership Inquiry\nGeneral Inquiry\nResearch"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Text",
+   "label": "Message"
+  },
+  {
+   "fieldname": "create_at",
+   "fieldtype": "Datetime",
+   "label": "Create At"
+  },
+  {
+   "fieldname": "ai_output_fields_section",
+   "fieldtype": "Section Break",
+   "label": "AI Output Fields"
+  },
+  {
+   "fieldname": "intent_confidence",
+   "fieldtype": "Float",
+   "label": "Intent Confidence",
+   "read_only": 1
+  },
+  {
+   "fieldname": "icp_score",
+   "fieldtype": "Int",
+   "label": "ICP Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lead_category",
+   "fieldtype": "Select",
+   "label": "Lead Category",
+   "options": "Hot\nWarm\nCold",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ai_reason",
+   "fieldtype": "Long Text",
+   "label": "AI Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "processed_at",
+   "fieldtype": "Datetime",
+   "label": "Processed At",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-22 19:10:59.016963",
+ "modified_by": "Administrator",
+ "module": "Ai Sales Agent",
+ "name": "AI Lead",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
