@@ -5,6 +5,23 @@ app_description = "ai sale agent"
 app_email = "arshikhan229@gmail.com"
 app_license = "mit"
 
+doc_events = {
+    "Communication": {
+        "after_insert":
+        "ai_sales_agent.ai_sales_agent.utils.communication_processor.process_communication"
+    }
+}
+
+override_whitelisted_methods = {
+"ai_sales_agent.api.whatsapp":
+"ai_sales_agent.api.whatsapp"
+}
+
+ignore_csrf = [
+"ai_sales_agent.api.whatsapp"
+]
+
+
 # Apps
 # ------------------
 

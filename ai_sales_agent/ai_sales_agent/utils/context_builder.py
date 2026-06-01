@@ -1,9 +1,9 @@
 import frappe
 
 
-def build_lead_context(email=None, limit=5):
+def build_customer_context(email=None, limit=5):
     """
-    Build previous interaction context for AI
+    Build previous customer interaction context
     """
 
     if not email:
@@ -11,8 +11,9 @@ def build_lead_context(email=None, limit=5):
 
     lead_name = frappe.db.get_value(
         "AI Lead",
-        {"email": email},
-        "name"
+        {
+            "email": email
+        }
     )
 
     if not lead_name:
@@ -36,15 +37,20 @@ def build_lead_context(email=None, limit=5):
     if not interactions:
         return ""
 
-    context = "Previous Customer Interactions:\n\n"
+    context = ""
 
-    for idx, row in enumerate(interactions, start=1):
+    for row in interactions:
 
-        context += (
-            f"{idx}. "
-            f"Message: {row.message}\n"
-            f"Intent: {row.ai_intent}\n"
-            f"Category: {row.ai_category}\n\n"
-        )
+        context += f"""
+Date: {row.get('interaction_date')}
+Intent: {row.get('ai_intent')}
+Category: {row.get('ai_category')}
+Message: {row.get('message')}
 
-    return context
+"""
+
+    return context.strip()
+
+
+# Backward compatibility
+build_lead_context = build_customer_context

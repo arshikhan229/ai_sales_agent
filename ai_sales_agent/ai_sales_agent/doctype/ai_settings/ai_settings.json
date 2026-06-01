@@ -13,7 +13,12 @@
   "facebook_app_id",
   "facebook_app_secret",
   "facebook_verify_token",
-  "facebook_page_access_token"
+  "facebook_page_access_token",
+  "email_address",
+  "email_password",
+  "imap_server",
+  "smtp_server",
+  "smtp_port"
  ],
  "fields": [
   {
@@ -60,13 +65,38 @@
    "fieldname": "facebook_page_access_token",
    "fieldtype": "Long Text",
    "label": "Facebook Page Access Token"
+  },
+  {
+   "fieldname": "email_address",
+   "fieldtype": "Data",
+   "label": "Email Address"
+  },
+  {
+   "fieldname": "email_password",
+   "fieldtype": "Password",
+   "label": "Email Password"
+  },
+  {
+   "fieldname": "imap_server",
+   "fieldtype": "Data",
+   "label": "Imap Server"
+  },
+  {
+   "fieldname": "smtp_server",
+   "fieldtype": "Data",
+   "label": "Smpt Server"
+  },
+  {
+   "fieldname": "smtp_port",
+   "fieldtype": "Int",
+   "label": "Smtp Port"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-15 14:17:42.856725",
+ "modified": "2026-05-25 14:35:36.286122",
  "modified_by": "Administrator",
  "module": "Ai Sales Agent",
  "name": "AI Settings",

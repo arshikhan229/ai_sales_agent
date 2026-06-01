@@ -10,44 +10,75 @@ VALID_INTENTS = [
 ]
 
 
-def normalize_intent(intent):
-    """
-    Normalize AI-generated intent
-    """
+def detect_intent(message=""):
 
-    if not intent:
-        return "General Inquiry"
+    message = (message or "").lower()
 
-    intent = intent.lower()
+    pricing_keywords = [
+        "price",
+        "pricing",
+        "cost",
+        "quotation",
+        "quote"
+    ]
 
-    mapping = {
-        "pricing": "Pricing Inquiry",
-        "price": "Pricing Inquiry",
-        "quotation": "Pricing Inquiry",
+    demo_keywords = [
+        "demo",
+        "meeting",
+        "presentation"
+    ]
 
-        "product": "Product Inquiry",
-        "feature": "Product Inquiry",
+    support_keywords = [
+        "issue",
+        "error",
+        "problem",
+        "bug",
+        "help",
+        "support"
+    ]
 
-        "support": "Support Request",
-        "issue": "Support Request",
-        "help": "Support Request",
+    billing_keywords = [
+        "invoice",
+        "payment",
+        "refund",
+        "billing"
+    ]
 
-        "demo": "Demo Request",
+    partnership_keywords = [
+        "partner",
+        "partnership",
+        "reseller",
+        "collaboration"
+    ]
 
-        "billing": "Billing Inquiry",
-        "invoice": "Billing Inquiry",
-        "payment": "Billing Inquiry",
+    complaint_keywords = [
+        "complaint",
+        "unhappy",
+        "bad service"
+    ]
 
-        "complaint": "Complaint",
+    for word in pricing_keywords:
+        if word in message:
+            return "Pricing Inquiry"
 
-        "partner": "Partnership Inquiry",
+    for word in demo_keywords:
+        if word in message:
+            return "Demo Request"
 
-        "general": "General Inquiry"
-    }
+    for word in support_keywords:
+        if word in message:
+            return "Support Request"
 
-    for keyword, normalized in mapping.items():
+    for word in billing_keywords:
+        if word in message:
+            return "Billing Inquiry"
 
-        if keyword in intent:
-            return normalized
+    for word in partnership_keywords:
+        if word in message:
+            return "Partnership Inquiry"
+
+    for word in complaint_keywords:
+        if word in message:
+            return "Complaint"
 
     return "General Inquiry"

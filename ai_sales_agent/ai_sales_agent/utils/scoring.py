@@ -9,35 +9,37 @@ def calculate_icp_score(
     email = (email or "").lower()
     company = (company or "").lower()
 
-    hot_keywords = [
+    # Strong buying signals
+    strong_keywords = [
         "pricing",
         "price",
         "cost",
-        "demo",
-        "buy",
-        "purchase",
         "quotation",
         "quote",
-        "urgent",
-        "implementation",
+        "demo",
+        "purchase",
+        "buy",
+        "implementation"
+    ]
+
+    # Medium signals
+    medium_keywords = [
         "erpnext",
         "crm",
         "software",
-        "payment",
-        "invoice",
-        "order",
-        "amount",
-        "bill",
-        "$",
-        "usd",
-        "deal",
-        "system",
-        "project"
+        "project",
+        "system"
     ]
 
-    for word in hot_keywords:
+    for word in strong_keywords:
+
         if word in message:
-            score += 15
+            score += 20
+
+    for word in medium_keywords:
+
+        if word in message:
+            score += 5
 
     free_domains = [
         "gmail.com",
@@ -51,22 +53,20 @@ def calculate_icp_score(
         domain = email.split("@")[-1]
 
         if domain not in free_domains:
-            score += 20
+            score += 10
 
     if company:
-        score += 20
+        score += 10
 
-    score = min(score, 100)
-
-    return score
+    return min(score, 100)
 
 
 def get_lead_category(score):
 
-    if score >= 40:
+    if score >= 60:
         return "Hot"
 
-    elif score >= 20:
+    elif score >= 25:
         return "Warm"
 
     return "Cold"

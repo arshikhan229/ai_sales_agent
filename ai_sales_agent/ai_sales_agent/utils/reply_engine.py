@@ -3,33 +3,64 @@ from openai import OpenAI
 
 
 def get_openai_client():
+    """
+    Get OpenAI client from AI Settings
+    """
 
-    settings = frappe.get_single("AI Settings")
+    settings = frappe.get_single(
+        "AI Settings"
+    )
 
-    api_key = settings.get_password("openai_api_key")
+    api_key = settings.get_password(
+        "openai_api_key"
+    )
 
     if not api_key:
-        frappe.throw("OpenAI API Key not found")
 
-    return OpenAI(api_key=api_key)
+        frappe.throw(
+            "OpenAI API Key not found in AI Settings"
+        )
+
+    return OpenAI(
+        api_key=api_key
+    )
 
 
 def generate_ai_reply(
     message,
     intent=None,
     lead_category=None,
-    company=None
+    company=None,
+    channel=None,
+    context=None
 ):
     """
-    Generate AI reply for customer
+    Generate intelligent CRM reply
     """
 
     client = get_openai_client()
 
-    prompt = f"""
-You are a professional AI Sales Assistant.
+    context = context or "No previous conversation history."
 
-Customer Message:
+    prompt = f"""
+You are a professional ERPNext CRM Sales Consultant.
+
+Business Services:
+
+- ERPNext Implementation
+- ERPNext Support
+- CRM Automation
+- AI Lead Qualification
+- Business Process Automation
+- Custom ERP Development
+- Workflow Automation
+- Inventory Management
+- Procurement Automation
+
+Customer History:
+{context}
+
+Current Customer Message:
 {message}
 
 Intent:
@@ -41,16 +72,45 @@ Lead Category:
 Company:
 {company}
 
-Your job:
+Channel:
+{channel}
 
-- Reply professionally
-- Reply shortly
-- Be human-like
-- Encourage customer to continue conversation
-- Ask helpful next-step questions
-- If customer asks pricing -> ask requirements
-- If customer asks service -> explain briefly
-- Keep response under 120 words
+Instructions:
+
+1. Reply professionally.
+
+2. Reply naturally like a human.
+
+3. Use previous conversation history if available.
+
+4. Never repeat questions already answered by customer.
+
+5. Keep response under 120 words.
+
+6. Encourage customer to continue discussion.
+
+7. Ask one useful qualification question.
+
+8. If Pricing Inquiry:
+   ask company size,
+   number of users,
+   required modules.
+
+9. If Demo Request:
+   ask preferred date and time.
+
+10. If Product Inquiry:
+    briefly explain solution
+    and ask requirements.
+
+11. If Support Request:
+    ask issue details.
+
+12. If customer already provided
+    company size or requirements,
+    do not ask again.
+
+13. End with one clear next step.
 
 Return only reply text.
 """
@@ -62,7 +122,19 @@ Return only reply text.
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an AI CRM Sales Assistant."
+                    "content":
+                    """
+You are an expert ERPNext CRM sales assistant.
+
+Rules:
+
+- Be concise.
+- Be professional.
+- Be helpful.
+- Use conversation history.
+- Never use markdown.
+- Return plain text only.
+"""
                 },
                 {
                     "role": "user",
@@ -73,11 +145,17 @@ Return only reply text.
             timeout=20
         )
 
-        reply = response.choices[0].message.content.strip()
+        reply = (
+            response
+            .choices[0]
+            .message
+            .content
+            .strip()
+        )
 
         return reply
 
-    except Exception as e:
+    except Exception:
 
         frappe.log_error(
             frappe.get_traceback(),
@@ -86,5 +164,8 @@ Return only reply text.
 
         return (
             "Thank you for contacting us. "
-            "Our team will get back to you shortly."
+            "We have received your inquiry and "
+            "our team will respond shortly. "
+            "Could you please share more details "
+            "about your requirements?"
         )

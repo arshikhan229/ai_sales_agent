@@ -9,6 +9,15 @@ from ai_sales_agent.ai_sales_agent.utils.reply_engine import (
     generate_ai_reply
 )
 
+from ai_sales_agent.ai_sales_agent.utils.contact_matcher import (
+    find_or_create_contact
+)
+
+from ai_sales_agent.ai_sales_agent.utils.lead_utils import (
+    create_ai_lead,
+    update_ai_lead
+)
+
 from ai_sales_agent.facebook.facebook_sender import (
     send_facebook_message
 )
@@ -17,9 +26,9 @@ from ai_sales_agent.facebook.facebook_sender import (
 @frappe.whitelist(allow_guest=True)
 def facebook_webhook():
 
-    # ==========================================
+    # ==================================================
     # FACEBOOK WEBHOOK VERIFICATION
-    # ==========================================
+    # ==================================================
     if frappe.request.method == "GET":
 
         try:
@@ -42,8 +51,8 @@ def facebook_webhook():
 
             if (
                 hub_mode == "subscribe"
-                and hub_token ==
-                settings.facebook_verify_token
+                and hub_token
+                == settings.facebook_verify_token
             ):
 
                 return Response(
@@ -69,9 +78,9 @@ def facebook_webhook():
                 status=403
             )
 
-    # ==========================================
-    # FACEBOOK EVENTS
-    # ==========================================
+    # ==================================================
+    # FACEBOOK MESSAGE EVENTS
+    # ==================================================
     if frappe.request.method == "POST":
 
         try:
@@ -118,106 +127,110 @@ def facebook_webhook():
                         ).get("text")
                     )
 
-                    # Ignore empty events
                     if not message_text:
                         continue
 
                     # ==================================
-                    # CREATE AI LEAD
+                    # CONTACT MATCHING
                     # ==================================
-                    lead = frappe.get_doc({
-                        "doctype": "AI Lead",
-                        "lead_name":
-                            sender_id
-                            or "Facebook User",
-                        "source": "Facebook",
-                        "message": message_text,
-                        "create_at":
-                            frappe.utils.now_datetime()
-                    })
 
-                    lead.insert(
-                        ignore_permissions=True
+                    contact = find_or_create_contact(
+                        facebook_id=sender_id
                     )
 
-                    frappe.db.commit()
+                    frappe.logger().info(
+                        f"CONTACT FOUND => {contact.name}"
+                    )
+
+                    # ==================================
+                    # CREATE / REUSE AI LEAD
+                    # ==================================
+
+                    lead = create_ai_lead(
+                        lead_name=sender_id or "Facebook User",
+                        source="Facebook",
+                        message=message_text,
+                        company=getattr(
+                            contact,
+                            "company_name",
+                            None
+                        )
+                    )
 
                     # ==================================
                     # AI ANALYSIS
                     # ==================================
+
                     analysis = analyze_lead(
                         message=message_text,
-                        email=getattr(
-                            lead,
-                            "email",
-                            None
-                        ),
+                        email=None,
                         company=getattr(
-                            lead,
-                            "company",
+                            contact,
+                            "company_name",
                             None
                         )
                     )
 
-                    lead.intent_type = (
-                        analysis.get(
-                            "intent_type"
-                        )
+                    # ==================================
+                    # UPDATE AI LEAD
+                    # ==================================
+
+                    update_ai_lead(
+                        lead,
+                        analysis
                     )
 
-                    lead.intent_confidence = (
-                        analysis.get(
-                            "intent_confidence"
-                        )
-                    )
+                    # ==================================
+                    # UPDATE ERPNext CONTACT
+                    # ==================================
 
-                    lead.icp_score = (
+                    contact.custom_lead_score = (
                         analysis.get(
                             "icp_score"
                         )
                     )
 
-                    lead.lead_category = (
+                    contact.custom_lead_category = (
                         analysis.get(
                             "lead_category"
                         )
                     )
 
-                    lead.ai_reason = (
-                        analysis.get(
-                            "reason"
-                        )
-                    )
-
-                    lead.processed_at = (
-                        frappe.utils.now_datetime()
-                    )
-
-                    lead.save(
+                    contact.save(
                         ignore_permissions=True
                     )
 
                     frappe.db.commit()
 
                     # ==================================
-                    # AI AUTO REPLY
+                    # GENERATE AI REPLY
                     # ==================================
+
                     try:
 
                         reply = generate_ai_reply(
                             message=message_text,
+
                             intent=analysis.get(
                                 "intent_type"
                             ),
+
                             lead_category=analysis.get(
                                 "lead_category"
                             ),
+
                             company=getattr(
-                                lead,
-                                "company",
+                                contact,
+                                "company_name",
                                 None
-                            )
+                            ),
+
+                            channel="Facebook"
                         )
+
+                        # ==================================
+                        # SEND FACEBOOK MESSAGE
+                        # ==================================
 
                         send_facebook_message(
                             recipient_id=sender_id,
@@ -225,7 +238,7 @@ def facebook_webhook():
                         )
 
                         frappe.logger().info(
-                            f"AUTO REPLY SENT => "
+                            f"FACEBOOK REPLY SENT => "
                             f"{sender_id}"
                         )
 
