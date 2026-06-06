@@ -123,7 +123,6 @@ Example:
         )
 
         data = json.loads(content)
-
         normalized_intent = normalize_intent(
             data.get(
                 "intent_type",
@@ -137,7 +136,18 @@ Example:
             company=company
         )
 
-        category = get_lead_category(score)
+        if normalized_intent in [
+            "Pricing Inquiry",
+            "Demo Request",
+            "Partnership Inquiry"
+        ]:
+            category = "Hot"
+
+        elif normalized_intent == "Product Inquiry":
+            category = "Warm"
+
+        else:
+            category = get_lead_category(score)
 
         return {
             "intent_type": normalized_intent,

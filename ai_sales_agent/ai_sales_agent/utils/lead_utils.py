@@ -1,9 +1,6 @@
 import frappe
 
 from ai_sales_agent.ai_sales_agent.utils.erpnext_crm_sync import (
-    create_erpnext_lead
-)
-from ai_sales_agent.ai_sales_agent.utils.erpnext_crm_sync import (
     sync_hot_lead_to_crm
 )
 
@@ -11,11 +8,34 @@ from ai_sales_agent.ai_sales_agent.utils.erpnext_crm_sync import (
 def find_duplicate_lead(
     email=None,
     source=None,
-    lead_name=None
+    lead_name=None,
+    contact=None
 ):
     """
-    Check if AI Lead already exists
+    Universal duplicate detection
+    for Email, Facebook, WhatsApp,
+    Instagram and LinkedIn.
     """
+
+    # =================================
+    # CONTACT MATCH (BEST MATCH)
+    # =================================
+
+    if contact:
+
+        existing = frappe.db.exists(
+            "AI Lead",
+            {
+                "contact": contact
+            }
+        )
+
+        if existing:
+            return existing
+
+    # =================================
+    # EMAIL MATCH
+    # =================================
 
     if email:
 
@@ -28,6 +48,10 @@ def find_duplicate_lead(
 
         if existing:
             return existing
+
+    # =================================
+    # SOURCE + LEAD NAME MATCH
+    # =================================
 
     if source and lead_name:
 
@@ -50,38 +74,77 @@ def create_ai_lead(
     source,
     message,
     email=None,
-    company=None
+    company=None,
+    contact=None
 ):
     """
-    Create AI Lead if not exists
+    Create AI Lead if not exists.
+    Always update latest message.
     """
 
     existing = find_duplicate_lead(
         email=email,
         source=source,
-        lead_name=lead_name
+        lead_name=lead_name,
+        contact=contact
     )
 
     if existing:
 
-        return frappe.get_doc(
+        lead = frappe.get_doc(
             "AI Lead",
             existing
         )
+
+        # Update latest message
+        if message:
+            lead.message = message
+
+        # Update email if missing
+        if email and not lead.email:
+            lead.email = email
+
+        # Update company if missing
+        if company and not lead.company:
+            lead.company = company
+
+        # Update contact if missing
+        if contact and not lead.contact:
+            lead.contact = contact
+
+        lead.save(
+            ignore_permissions=True
+        )
+
+        frappe.db.commit()
+
+        return lead
+
+    # =================================
+    # CREATE NEW AI LEAD
+    # =================================
 
     lead = frappe.get_doc({
 
         "doctype": "AI Lead",
 
-        "lead_name": lead_name,
+        "lead_name":
+            lead_name,
 
-        "email": email,
+        "email":
+            email,
 
-        "company": company,
+        "company":
+            company,
 
-        "source": source,
+        "contact":
+            contact,
 
-        "message": message,
+        "source":
+            source,
+
+        "message":
+            message,
 
         "create_at":
             frappe.utils.now_datetime()
@@ -147,15 +210,14 @@ def update_ai_lead(
 
     frappe.db.commit()
 
-    # ==========================
-    # ERPNext CRM Sync
-    # ==========================
+    # =================================
+    # CRM SYNC
+    # =================================
 
-    if (
-        lead.lead_category == "Hot"
-        or
-        (lead.icp_score or 0) >= 40
-    ):
+    if lead.lead_category in [
+        "Warm",
+        "Hot"
+    ]:
 
         sync_hot_lead_to_crm(
             lead

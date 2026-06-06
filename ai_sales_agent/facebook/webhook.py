@@ -18,6 +18,10 @@ from ai_sales_agent.ai_sales_agent.utils.lead_utils import (
     update_ai_lead
 )
 
+from ai_sales_agent.ai_sales_agent.utils.conversation_logger import (
+    log_conversation
+)
+
 from ai_sales_agent.facebook.facebook_sender import (
     send_facebook_message
 )
@@ -145,16 +149,11 @@ def facebook_webhook():
                     # ==================================
                     # CREATE / REUSE AI LEAD
                     # ==================================
-
                     lead = create_ai_lead(
-                        lead_name=sender_id or "Facebook User",
+                        lead_name=sender_id,
                         source="Facebook",
                         message=message_text,
-                        company=getattr(
-                            contact,
-                            "company_name",
-                            None
-                        )
+                        contact=contact.name
                     )
 
                     # ==================================
@@ -178,6 +177,32 @@ def facebook_webhook():
                     update_ai_lead(
                         lead,
                         analysis
+                    )
+                    frappe.log_error(
+                        f"""
+                    CONTACT={contact.name}
+
+                    MESSAGE={message_text}
+
+                    INTENT={analysis.get('intent_type')}
+                    """,
+                        "FB CONVERSATION DEBUG"
+                    )
+
+                    conversation = log_conversation(
+                        contact=contact.name,
+                        channel="Facebook",
+                        direction="Incoming",
+                        message=message_text,
+                        ai_reply="",
+                        intent=analysis.get(
+                            "intent_type"
+                        )
+                    )
+
+                    frappe.log_error(
+                        f"Conversation Created = {conversation}",
+                        "FB CONVERSATION RESULT"
                     )
 
                     # ==================================

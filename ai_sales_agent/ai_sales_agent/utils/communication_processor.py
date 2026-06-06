@@ -72,7 +72,8 @@ def process_communication(doc, method=None):
             lead_name=contact.name,
             source="Email",
             message=content,
-            email=sender
+            email=sender,
+            contact=contact.name
         )
 
         # =================================

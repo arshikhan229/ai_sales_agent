@@ -1,0 +1,543 @@
+import frappe
+
+from ai_sales_agent.ai_sales_agent.utils.ai_engine import (
+    analyze_lead,
+)
+from ai_sales_agent.ai_sales_agent.utils.contact_matcher import (
+    find_or_create_contact,
+)
+from ai_sales_agent.ai_sales_agent.utils.context_builder import (
+    build_customer_context,
+)
+from ai_sales_agent.ai_sales_agent.utils.conversation_logger import (
+    log_conversation as save_crm_conversation,
+)
+from ai_sales_agent.ai_sales_agent.utils.lead_utils import (
+    create_ai_lead,
+    update_ai_lead,
+)
+from ai_sales_agent.ai_sales_agent.utils.reply_engine import (
+    generate_ai_reply,
+)
+from ai_sales_agent.ai_sales_agent.whatsapp.whatsapp_sender import (
+    send_whatsapp_message,
+)
+from ai_sales_agent.facebook.facebook_sender import (
+    send_facebook_message,
+)
+
+
+ALLOWED_CHANNELS = frozenset({
+    "WhatsApp",
+    "Facebook",
+    "Email",
+})
+
+CHANNEL_SOURCE_MAP = {
+    "WhatsApp": "WhatsApp",
+    "Facebook": "Facebook",
+    "Email": "Email",
+}
+
+AUTO_REPLY_CHANNELS = frozenset({
+    "WhatsApp",
+    "Facebook",
+})
+
+
+class ChannelProcessorValidationError(ValueError):
+    pass
+
+
+def process_inbound_message(
+    channel,
+    message,
+    *,
+    email=None,
+    phone=None,
+    facebook_id=None,
+    lead_name=None,
+    company=None,
+    auto_reply=None,
+    reply_target=None,
+    communication_doc=None,
+    update_contact_scores=True,
+    record_conversation=True,
+):
+    """
+    Unified inbound message processor for WhatsApp, Facebook, and Email.
+
+    Qualifies via AI Lead and syncs Warm/Hot leads to ERPNext CRM
+    through the existing update_ai_lead workflow.
+    """
+
+    if channel not in ALLOWED_CHANNELS:
+        return _result(
+            channel=channel,
+            success=False,
+            error="invalid_channel",
+        )
+
+    message = (message or "").strip()
+
+    if not message:
+        return _result(
+            channel=channel,
+            success=False,
+            skipped=True,
+            skip_reason="empty_message",
+        )
+
+    if not _has_identity(
+        email=email,
+        phone=phone,
+        facebook_id=facebook_id,
+    ):
+        return _result(
+            channel=channel,
+            success=False,
+            error="missing_identity",
+        )
+
+    if auto_reply is None:
+        auto_reply = channel in AUTO_REPLY_CHANNELS
+
+    if phone:
+        phone = _normalize_phone(phone)
+
+    frappe.logger().info(
+        f"CHANNEL PROCESSOR START => {channel}"
+    )
+
+    try:
+        contact = find_or_create_contact(
+            email=email,
+            phone=phone,
+            facebook_id=facebook_id,
+            company=company,
+        )
+
+        contact_name = contact.name
+        contact_email = email or getattr(
+            contact,
+            "email_id",
+            None,
+        )
+        contact_company = company or getattr(
+            contact,
+            "company_name",
+            None,
+        )
+
+        resolved_lead_name = _resolve_lead_name(
+            channel=channel,
+            lead_name=lead_name,
+            email=contact_email,
+            phone=phone,
+            facebook_id=facebook_id,
+            contact_name=contact_name,
+        )
+
+        source = CHANNEL_SOURCE_MAP[channel]
+
+        lead = create_ai_lead(
+            lead_name=resolved_lead_name,
+            source=source,
+            message=message,
+            email=contact_email,
+            company=contact_company,
+            contact=contact_name,
+        )
+
+        context = build_customer_context(
+            email=contact_email,
+        )
+
+        analysis = analyze_lead(
+            message=message,
+            email=contact_email,
+            company=contact_company,
+        )
+
+        update_ai_lead(
+            lead,
+            analysis,
+        )
+
+        frappe.logger().info(
+            f"CHANNEL PROCESSOR ANALYSIS => "
+            f"{channel} : {analysis}"
+        )
+
+        intent = analysis.get("intent_type")
+        lead_category = analysis.get("lead_category")
+
+        reply = generate_ai_reply(
+            message=message,
+            intent=intent,
+            lead_category=lead_category,
+            company=contact_company,
+            channel=channel,
+            context=context,
+        )
+
+        delivery = _deliver_reply(
+            channel=channel,
+            reply=reply,
+            auto_reply=auto_reply,
+            reply_target=reply_target or {},
+        )
+
+        conversation_name = None
+
+        if record_conversation:
+            conversation = save_crm_conversation(
+                contact=contact_name,
+                channel=channel,
+                direction="Incoming",
+                message=message,
+                ai_reply=reply,
+                intent=intent,
+            )
+
+            if conversation:
+                conversation_name = conversation.name
+
+        if update_contact_scores:
+            _update_contact_intelligence(
+                contact,
+                analysis,
+            )
+
+        communication_name = None
+
+        if communication_doc:
+            communication_name = _enrich_communication(
+                communication_doc,
+                analysis,
+                reply,
+            )
+
+        erp_lead, erp_opportunity = _lookup_crm_records(
+            lead=lead,
+            email=contact_email,
+            lead_category=lead_category,
+        )
+
+        frappe.logger().info(
+            f"CHANNEL PROCESSOR SUCCESS => {channel}"
+        )
+
+        return _result(
+            channel=channel,
+            success=True,
+            contact=contact_name,
+            ai_lead=lead.name,
+            erp_lead=erp_lead,
+            erp_opportunity=erp_opportunity,
+            analysis=analysis,
+            reply=reply,
+            conversation=conversation_name,
+            communication=communication_name,
+            delivery=delivery,
+            crm_sync={
+                "triggered": lead_category in (
+                    "Warm",
+                    "Hot",
+                ),
+                "category": lead_category,
+            },
+        )
+
+    except Exception:
+
+        frappe.log_error(
+            frappe.get_traceback(),
+            f"CHANNEL PROCESSOR ERROR [{channel}]",
+        )
+
+        return _result(
+            channel=channel,
+            success=False,
+            error="pipeline_failed",
+        )
+
+
+def _has_identity(
+    email=None,
+    phone=None,
+    facebook_id=None,
+):
+    return bool(
+        email
+        or phone
+        or facebook_id
+    )
+
+
+def _normalize_phone(phone):
+    phone = (
+        phone
+        .replace("whatsapp:", "")
+        .replace(" ", "")
+        .strip()
+    )
+
+    if phone and not phone.startswith("+"):
+        phone = f"+{phone}"
+
+    return phone
+
+
+def _resolve_lead_name(
+    channel,
+    lead_name,
+    email,
+    phone,
+    facebook_id,
+    contact_name,
+):
+    if lead_name:
+        return lead_name
+
+    if channel == "WhatsApp" and phone:
+        return phone
+
+    if channel == "Facebook" and facebook_id:
+        return facebook_id
+
+    if channel == "Email" and contact_name:
+        return contact_name
+
+    return (
+        email
+        or phone
+        or facebook_id
+        or contact_name
+        or "Unknown"
+    )
+
+
+def _update_contact_intelligence(contact, analysis):
+    contact.custom_lead_score = (
+        analysis.get("icp_score")
+    )
+    contact.custom_lead_category = (
+        analysis.get("lead_category")
+    )
+    contact.save(
+        ignore_permissions=True,
+    )
+
+
+def _enrich_communication(
+    communication_doc,
+    analysis,
+    reply,
+):
+    communication_doc.custom_ai_intent = (
+        analysis.get("intent_type")
+    )
+    communication_doc.custom_ai_confidence = (
+        analysis.get("intent_confidence")
+    )
+    communication_doc.custom_lead_score = (
+        analysis.get("icp_score")
+    )
+    communication_doc.custom_lead_category = (
+        analysis.get("lead_category")
+    )
+    communication_doc.custom_ai_suggested_reply = (
+        reply
+    )
+    communication_doc._ai_processed = True
+    communication_doc.save(
+        ignore_permissions=True,
+    )
+    return communication_doc.name
+
+
+def _deliver_reply(
+    channel,
+    reply,
+    auto_reply,
+    reply_target,
+):
+    if channel == "Email":
+        return {
+            "status": "suggested",
+            "channel": channel,
+            "detail": None,
+        }
+
+    if not auto_reply:
+        return {
+            "status": "not_applicable",
+            "channel": channel,
+            "detail": None,
+        }
+
+    if not reply:
+        return {
+            "status": "skipped",
+            "channel": channel,
+            "detail": "empty_reply",
+        }
+
+    try:
+        if channel == "WhatsApp":
+            phone = reply_target.get("phone")
+
+            if not phone:
+                return {
+                    "status": "failed",
+                    "channel": channel,
+                    "detail": "missing_reply_target",
+                }
+
+            detail = send_whatsapp_message(
+                to_number=phone,
+                message=reply,
+            )
+
+            if detail:
+                return {
+                    "status": "sent",
+                    "channel": channel,
+                    "detail": detail,
+                }
+
+            return {
+                "status": "failed",
+                "channel": channel,
+                "detail": "delivery_failed",
+            }
+
+        if channel == "Facebook":
+            recipient_id = reply_target.get(
+                "facebook_id"
+            )
+
+            if not recipient_id:
+                return {
+                    "status": "failed",
+                    "channel": channel,
+                    "detail": "missing_reply_target",
+                }
+
+            response = send_facebook_message(
+                recipient_id=recipient_id,
+                message=reply,
+            )
+
+            return {
+                "status": "sent",
+                "channel": channel,
+                "detail": frappe.as_json(
+                    response
+                ),
+            }
+
+    except Exception:
+
+        frappe.log_error(
+            frappe.get_traceback(),
+            f"CHANNEL DELIVERY ERROR [{channel}]",
+        )
+
+        return {
+            "status": "failed",
+            "channel": channel,
+            "detail": "delivery_failed",
+        }
+
+    return {
+        "status": "not_applicable",
+        "channel": channel,
+        "detail": None,
+    }
+
+
+def _lookup_crm_records(
+    lead,
+    email,
+    lead_category,
+):
+    erp_lead = None
+
+    if email:
+        erp_lead = frappe.db.get_value(
+            "Lead",
+            {"email_id": email},
+            "name",
+        )
+
+    if not erp_lead and lead.lead_name:
+        erp_lead = frappe.db.get_value(
+            "Lead",
+            {"lead_name": lead.lead_name},
+            "name",
+        )
+
+    erp_opportunity = None
+
+    if lead_category == "Hot" and erp_lead:
+        erp_opportunity = frappe.db.get_value(
+            "Opportunity",
+            {
+                "opportunity_from": "Lead",
+                "party_name": erp_lead,
+            },
+            "name",
+        )
+
+    return erp_lead, erp_opportunity
+
+
+def _result(
+    channel,
+    success=False,
+    skipped=False,
+    skip_reason=None,
+    contact=None,
+    ai_lead=None,
+    erp_lead=None,
+    erp_opportunity=None,
+    analysis=None,
+    reply=None,
+    conversation=None,
+    communication=None,
+    delivery=None,
+    crm_sync=None,
+    error=None,
+):
+    if delivery is None:
+        delivery = {
+            "status": "not_applicable",
+            "channel": channel,
+            "detail": None,
+        }
+
+    if crm_sync is None:
+        crm_sync = {
+            "triggered": False,
+            "category": None,
+        }
+
+    return {
+        "success": success,
+        "skipped": skipped,
+        "skip_reason": skip_reason,
+        "channel": channel,
+        "contact": contact,
+        "ai_lead": ai_lead,
+        "erp_lead": erp_lead,
+        "erp_opportunity": erp_opportunity,
+        "analysis": analysis,
+        "reply": reply,
+        "conversation": conversation,
+        "communication": communication,
+        "delivery": delivery,
+        "crm_sync": crm_sync,
+        "error": error,
+    }

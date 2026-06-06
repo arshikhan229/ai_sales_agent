@@ -1,0 +1,21 @@
+{
+ "content": "[]",
+ "creation": "2026-06-02 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-06-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Sales Agent",
+ "name": "ai-inbox",
+ "owner": "Administrator",
+ "page_name": "ai-inbox",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "script": "",
+ "standard": "Yes",
+ "style": ""
+}

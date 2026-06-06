@@ -21,6 +21,9 @@ from ai_sales_agent.ai_sales_agent.utils.lead_utils import (
     update_ai_lead
 )
 
+from ai_sales_agent.ai_sales_agent.utils.contact_matcher import (
+    find_or_create_contact
+)
 
 
 @frappe.whitelist(allow_guest=True)
@@ -43,50 +46,50 @@ def whatsapp_webhook():
         customer_number = (
             customer_number
             .replace("whatsapp:", "")
+            .replace(" ", "")
+            .strip()
         )
+
+        if customer_number and not customer_number.startswith("+"):
+            customer_number = f"+{customer_number}"
 
         frappe.logger().info(
-            f"WHATSAPP INCOMING => "
-            f"{customer_number} : "
-            f"{customer_message}"
+            f"WHATSAPP INCOMING => {customer_number} : {customer_message}"
         )
 
-        contact_name = frappe.db.get_value(
-            "Contact",
-            {
-                "mobile_no": customer_number
-            }
-        )
+        if not customer_number:
 
-        if not contact_name:
-
-            contact = frappe.get_doc({
-                "doctype": "Contact",
-                "first_name": customer_number,
-                "mobile_no": customer_number
-            })
-
-            contact.insert(
-                ignore_permissions=True
+            frappe.log_error(
+                "EMPTY CUSTOMER NUMBER",
+                "WHATSAPP ERROR"
             )
 
-            frappe.db.commit()
+            return "OK"
 
-            contact_name = contact.name
+        # =====================================
+        # CONTACT
+        # =====================================
 
-        # ==========================
-        # CREATE AI LEAD
-        # ==========================
+        contact = find_or_create_contact(
+            phone=customer_number
+        )
+
+        contact_name = contact.name
+
+        # =====================================
+        # AI LEAD
+        # =====================================
 
         lead = create_ai_lead(
             lead_name=customer_number,
             source="WhatsApp",
-            message=customer_message
+            message=customer_message,
+            contact=contact_name
         )
 
-        # ==========================
+        # =====================================
         # AI ANALYSIS
-        # ==========================
+        # =====================================
 
         analysis = analyze_lead(
             message=customer_message,
@@ -97,7 +100,11 @@ def whatsapp_webhook():
             lead,
             analysis
         )
-         
+
+        frappe.logger().info(
+            f"WHATSAPP ANALYSIS => {analysis}"
+        )
+
         intent = analysis.get(
             "intent_type"
         )
@@ -106,9 +113,9 @@ def whatsapp_webhook():
             "lead_category"
         )
 
-        # ==========================
+        # =====================================
         # AI REPLY
-        # ==========================
+        # =====================================
 
         ai_reply = generate_ai_reply(
             message=customer_message,
@@ -117,26 +124,30 @@ def whatsapp_webhook():
             channel="WhatsApp"
         )
 
-        # ==========================
-        # SEND WHATSAPP
-        # ==========================
+        # =====================================
+        # SEND MESSAGE
+        # =====================================
 
         send_whatsapp_message(
             to_number=customer_number,
             message=ai_reply
         )
 
-        # ==========================
-        # LOG CONVERSATION
-        # ==========================
+        # =====================================
+        # CRM CONVERSATION
+        # =====================================
 
-        log_conversation(
+        conversation = log_conversation(
             contact=contact_name,
             channel="WhatsApp",
             direction="Incoming",
             message=customer_message,
             ai_reply=ai_reply,
             intent=intent
+        )
+
+        frappe.logger().info(
+            f"WHATSAPP CONVERSATION => {conversation.name}"
         )
 
         frappe.logger().info(

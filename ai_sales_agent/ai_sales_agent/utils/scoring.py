@@ -28,7 +28,16 @@ def calculate_icp_score(
         "crm",
         "software",
         "project",
-        "system"
+        "system",
+        "solution",
+        "requirement",
+        "required",
+        "automation",
+        "platform",
+        "integration",
+        "implementation",
+        "consulting",
+        "service"
     ]
 
     for word in strong_keywords:
@@ -39,7 +48,7 @@ def calculate_icp_score(
     for word in medium_keywords:
 
         if word in message:
-            score += 5
+            score += 15
 
     free_domains = [
         "gmail.com",
