@@ -1,28 +1,7 @@
 import frappe
 
-from ai_sales_agent.ai_sales_agent.utils.ai_engine import (
-    analyze_lead
-)
-
-from ai_sales_agent.ai_sales_agent.utils.reply_engine import (
-    generate_ai_reply
-)
-
-from ai_sales_agent.ai_sales_agent.whatsapp.whatsapp_sender import (
-    send_whatsapp_message
-)
-
-from ai_sales_agent.ai_sales_agent.utils.conversation_logger import (
-    log_conversation
-)
-
-from ai_sales_agent.ai_sales_agent.utils.lead_utils import (
-    create_ai_lead,
-    update_ai_lead
-)
-
-from ai_sales_agent.ai_sales_agent.utils.contact_matcher import (
-    find_or_create_contact
+from ai_sales_agent.ai_sales_agent.utils.channel_processor import (
+    process_inbound_message,
 )
 
 
@@ -66,95 +45,33 @@ def whatsapp_webhook():
 
             return "OK"
 
-        # =====================================
-        # CONTACT
-        # =====================================
-
-        contact = find_or_create_contact(
-            phone=customer_number
-        )
-
-        contact_name = contact.name
-
-        # =====================================
-        # AI LEAD
-        # =====================================
-
-        lead = create_ai_lead(
-            lead_name=customer_number,
-            source="WhatsApp",
-            message=customer_message,
-            contact=contact_name
-        )
-
-        # =====================================
-        # AI ANALYSIS
-        # =====================================
-
-        analysis = analyze_lead(
-            message=customer_message,
-            email=""
-        )
-
-        update_ai_lead(
-            lead,
-            analysis
-        )
-
-        frappe.logger().info(
-            f"WHATSAPP ANALYSIS => {analysis}"
-        )
-
-        intent = analysis.get(
-            "intent_type"
-        )
-
-        lead_category = analysis.get(
-            "lead_category"
-        )
-
-        # =====================================
-        # AI REPLY
-        # =====================================
-
-        ai_reply = generate_ai_reply(
-            message=customer_message,
-            intent=intent,
-            lead_category=lead_category,
-            channel="WhatsApp"
-        )
-
-        # =====================================
-        # SEND MESSAGE
-        # =====================================
-
-        send_whatsapp_message(
-            to_number=customer_number,
-            message=ai_reply
-        )
-
-        # =====================================
-        # CRM CONVERSATION
-        # =====================================
-
-        conversation = log_conversation(
-            contact=contact_name,
+        result = process_inbound_message(
             channel="WhatsApp",
-            direction="Incoming",
             message=customer_message,
-            ai_reply=ai_reply,
-            intent=intent
+            phone=customer_number,
+            reply_target={
+                "phone": customer_number,
+            },
         )
 
-        frappe.logger().info(
-            f"WHATSAPP CONVERSATION => {conversation.name}"
+        if result.get("success"):
+
+            frappe.logger().info(
+                "WHATSAPP FLOW SUCCESS"
+            )
+
+            return "OK"
+
+        if result.get("skipped"):
+
+            return "OK"
+
+        frappe.log_error(
+            frappe.as_json(result),
+            "WHATSAPP PROCESSOR FAILED",
         )
 
-        frappe.logger().info(
-            "WHATSAPP FLOW SUCCESS"
-        )
-
-        return "OK"
+        return "ERROR"
 
     except Exception:
 

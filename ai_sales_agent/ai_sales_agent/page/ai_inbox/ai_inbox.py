@@ -137,6 +137,9 @@ def get_inbox():
             "contact":
                 display_contact,
 
+            "actual_contact":
+                row.contact,
+
             "messages":
                 row.total_messages,
 

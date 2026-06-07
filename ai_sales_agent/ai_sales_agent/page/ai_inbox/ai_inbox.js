@@ -44,7 +44,7 @@ function load_inbox(page) {
 						<td>
 							<a href="#"
 							   class="open-contact"
-							   data-contact="${row.contact}">
+							   data-contact="${row.actual_contact}">
 								${row.contact || ""}
 							</a>
 						</td>
