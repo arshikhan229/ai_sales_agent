@@ -12,6 +12,9 @@ from ai_sales_agent.ai_sales_agent.utils.context_builder import (
 from ai_sales_agent.ai_sales_agent.utils.conversation_logger import (
     log_conversation as save_crm_conversation,
 )
+from ai_sales_agent.ai_sales_agent.utils.lead_filter import (
+    should_process_email,
+)
 from ai_sales_agent.ai_sales_agent.utils.lead_utils import (
     create_ai_lead,
     update_ai_lead,
@@ -56,6 +59,7 @@ def process_inbound_message(
     email=None,
     phone=None,
     facebook_id=None,
+    subject=None,
     lead_name=None,
     company=None,
     auto_reply=None,
@@ -108,6 +112,30 @@ def process_inbound_message(
     frappe.logger().info(
         f"CHANNEL PROCESSOR START => {channel}"
     )
+
+    if channel == "Email":
+
+        filter_result = should_process_email(
+            sender=email,
+            subject=subject,
+            content=message,
+        )
+
+        if not filter_result.get("process"):
+
+            frappe.logger().info(
+                f"LEAD FILTER SKIP => {email} : "
+                f"{filter_result.get('reason')}"
+            )
+
+            return _result(
+                channel=channel,
+                success=False,
+                skipped=True,
+                skip_reason=filter_result.get(
+                    "reason"
+                ),
+            )
 
     try:
         contact = find_or_create_contact(
