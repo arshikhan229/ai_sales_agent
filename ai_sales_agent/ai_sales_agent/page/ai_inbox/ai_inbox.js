@@ -10,6 +10,24 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 };
 
 
+function get_channel_label(channel) {
+
+	if (channel === "WhatsApp") {
+		return "📱 WhatsApp";
+	}
+
+	if (channel === "Facebook") {
+		return "📘 Facebook";
+	}
+
+	if (channel === "Email") {
+		return "📧 Email";
+	}
+
+	return channel || "";
+}
+
+
 function load_inbox(page) {
 
 	frappe.call({
@@ -26,6 +44,7 @@ function load_inbox(page) {
 					<thead>
 						<tr>
 							<th>Contact</th>
+							<th>Channel</th>
 							<th>Messages</th>
 							<th>Intent</th>
 							<th>Category</th>
@@ -48,6 +67,8 @@ function load_inbox(page) {
 								${row.contact || ""}
 							</a>
 						</td>
+
+						<td>${get_channel_label(row.channel)}</td>
 
 						<td>${row.messages || 0}</td>
 

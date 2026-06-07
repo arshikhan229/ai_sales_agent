@@ -22,7 +22,8 @@ def get_inbox():
         latest = frappe.db.sql("""
             SELECT
                 intent,
-                message
+                message,
+                channel
             FROM `tabCRM Conversation`
             WHERE contact=%s
             ORDER BY timestamp DESC
@@ -33,6 +34,11 @@ def get_inbox():
 
         intent = latest.get(
             "intent",
+            ""
+        )
+
+        channel = latest.get(
+            "channel",
             ""
         )
 
@@ -139,6 +145,9 @@ def get_inbox():
 
             "actual_contact":
                 row.contact,
+
+            "channel":
+                channel,
 
             "messages":
                 row.total_messages,
