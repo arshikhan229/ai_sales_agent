@@ -28,6 +28,9 @@ from ai_sales_agent.ai_sales_agent.whatsapp.whatsapp_sender import (
 from ai_sales_agent.facebook.facebook_sender import (
     send_facebook_message,
 )
+from ai_sales_agent.ai_sales_agent.utils.email_sender import (
+    send_email_reply,
+)
 
 
 ALLOWED_CHANNELS = frozenset({
@@ -392,24 +395,40 @@ def _deliver_reply(
     reply_target,
 ):
     if channel == "Email":
-        return {
-            "status": "suggested",
-            "channel": channel,
-            "detail": None,
-        }
 
-    if not auto_reply:
-        return {
-            "status": "not_applicable",
-            "channel": channel,
-            "detail": None,
-        }
+        if not auto_reply:
+            return {
+                "status": "suggested",
+                "channel": channel,
+                "detail": None,
+            }
 
-    if not reply:
+        recipient = reply_target.get("email")
+
+        if not recipient:
+            recipient = reply_target.get(
+                "sender"
+            )
+
+        if not recipient:
+            return {
+                "status": "failed",
+                "channel": channel,
+                "detail": "missing_email",
+            }
+
+        send_email_reply(
+            recipient=recipient,
+            subject=reply_target.get(
+                "subject"
+            ),
+            message=reply,
+        )
+
         return {
-            "status": "skipped",
+            "status": "sent",
             "channel": channel,
-            "detail": "empty_reply",
+            "detail": "email_sent",
         }
 
     try:

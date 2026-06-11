@@ -12,7 +12,7 @@ def get_inbox():
         FROM `tabCRM Conversation`
         GROUP BY contact
         ORDER BY last_activity DESC
-        LIMIT 200
+        LIMIT 500
     """, as_dict=True)
 
     results = []
@@ -32,15 +32,14 @@ def get_inbox():
 
         latest = latest[0] if latest else {}
 
-        intent = latest.get(
-            "intent",
-            ""
-        )
+        intent = latest.get("intent", "")
+        channel = latest.get("channel", "")
 
-        channel = latest.get(
-            "channel",
-            ""
-        )
+        message_preview = (latest.get("message") or "")[:80]
+
+        # =====================================
+        # HIDE GENERAL INQUIRIES
+        # =====================================
 
         if intent == "General Inquiry":
             continue
@@ -50,15 +49,12 @@ def get_inbox():
         opportunity = ""
 
         # =====================================
-        # DISPLAY CONTACT NAME
+        # CONTACT DISPLAY
         # =====================================
 
         display_contact = row.contact
 
-        if frappe.db.exists(
-            "Contact",
-            row.contact
-        ):
+        if frappe.db.exists("Contact", row.contact):
 
             contact_doc = frappe.get_doc(
                 "Contact",
@@ -80,7 +76,22 @@ def get_inbox():
                 )
 
         # =====================================
-        # AI LEAD
+        # CHANNEL DISPLAY
+        # =====================================
+
+        channel_display = channel
+
+        if channel == "WhatsApp":
+            channel_display = "💬 WhatsApp"
+
+        elif channel == "Facebook":
+            channel_display = "📘 Facebook"
+
+        elif channel == "Email":
+            channel_display = "📧 Email"
+
+        # =====================================
+        # AI LEAD LOOKUP
         # =====================================
 
         ai_lead_name = frappe.db.get_value(
@@ -108,9 +119,58 @@ def get_inbox():
                 or 0
             )
 
-            # =================================
-            # ERPNext Lead
-            # =================================
+            # =====================================
+            # FILTER SPAM / NEWSLETTER EMAILS
+            # =====================================
+
+            email = (
+                ai_lead.email or ""
+            ).lower()
+
+            blocked_domains = (
+                "github.com",
+                "linkedin.com",
+                "substack.com",
+                "coursera.org",
+                "coursera.com",
+                "medium.com",
+                "coinmarketcap.com",
+                "academia-mail.com",
+                "economist.com",
+                "foodpanda.pk",
+                "temuemail.com",
+                "skyscanner.com",
+            )
+
+            if any(
+                domain in email
+                for domain in blocked_domains
+            ):
+                continue
+
+            # =====================================
+            # HIDE COLD LEADS
+            # =====================================
+
+            if lead_category == "Cold":
+                continue
+
+            # =====================================
+            # CATEGORY BADGE
+            # =====================================
+
+            if lead_category == "Hot":
+                lead_category = "🔥 Hot"
+
+            elif lead_category == "Warm":
+                lead_category = "🟡 Warm"
+
+            elif lead_category == "Cold":
+                lead_category = "⚪ Cold"
+
+            # =====================================
+            # ERP LEAD LOOKUP
+            # =====================================
 
             erp_lead = None
 
@@ -124,15 +184,30 @@ def get_inbox():
                     "name"
                 )
 
-            # =================================
-            # Opportunity
-            # =================================
+            if (
+                not erp_lead
+                and ai_lead.lead_name
+            ):
+
+                erp_lead = frappe.db.get_value(
+                    "Lead",
+                    {
+                        "lead_name":
+                            ai_lead.lead_name
+                    },
+                    "name"
+                )
+
+            # =====================================
+            # OPPORTUNITY LOOKUP
+            # =====================================
 
             if erp_lead:
 
                 opportunity = frappe.db.get_value(
                     "Opportunity",
                     {
+                        "opportunity_from": "Lead",
                         "party_name": erp_lead
                     },
                     "name"
@@ -147,13 +222,16 @@ def get_inbox():
                 row.contact,
 
             "channel":
-                channel,
+                channel_display,
 
             "messages":
                 row.total_messages,
 
             "intent":
                 intent,
+
+            "preview":
+                message_preview,
 
             "lead_category":
                 lead_category,
@@ -168,13 +246,43 @@ def get_inbox():
                 row.last_activity
         })
 
+    # =====================================
+    # HOT LEADS FIRST
+    # =====================================
+
+    def sort_weight(item):
+
+        category = item.get(
+            "lead_category",
+            ""
+        )
+
+        if "Hot" in category:
+            priority = 3
+
+        elif "Warm" in category:
+            priority = 2
+
+        else:
+            priority = 1
+
+        return (
+            priority,
+            item.get("icp_score", 0),
+            item.get("last_activity")
+        )
+
+    results.sort(
+        key=sort_weight,
+        reverse=True
+    )
+
     return results
 
 
 @frappe.whitelist()
 def get_contact_timeline(contact):
 
-    # Handle FB_123456 format
     if contact.startswith("FB_"):
 
         fb_id = contact.replace(

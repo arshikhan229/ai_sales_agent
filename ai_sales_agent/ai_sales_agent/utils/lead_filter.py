@@ -10,6 +10,11 @@ BLOCKED_DOMAINS = (
     "substack.com",
     "academia-mail.com",
     "linkedin.com",
+    "economist.com",
+    "temuemail.com",
+    "coursera.org",
+    "render.com",
+    "incident.io",
 )
 
 BLOCKED_SUBJECT_KEYWORDS = (
@@ -18,6 +23,8 @@ BLOCKED_SUBJECT_KEYWORDS = (
     "unsubscribe",
     "ci failed",
     "workflow run",
+    "final reminder",
+    "daily digest",
 )
 
 BLOCKED_CONTENT_KEYWORDS = (
@@ -26,25 +33,48 @@ BLOCKED_CONTENT_KEYWORDS = (
     "view in browser",
 )
 
+SALES_KEYWORDS = (
+    "erp",
+    "erpnext",
+    "quotation",
+    "quote",
+    "pricing",
+    "price",
+    "demo",
+    "implementation",
+    "consulting",
+    "inventory",
+    "procurement",
+    "purchase",
+    "crm",
+    "automation",
+    "support",
+    "integration",
+    "software",
+)
+
+
+def has_sales_intent(subject, content):
+
+    text = f"{subject} {content}".lower()
+
+    return any(
+        keyword in text
+        for keyword in SALES_KEYWORDS
+    )
+
 
 def should_process_email(
     sender,
     subject,
     content,
 ):
-    """
-    Decide whether an inbound email should enter
-    the AI qualification pipeline.
-
-    Returns:
-        {"process": True, "reason": None}
-        {"process": False, "reason": "<category>"}
-    """
 
     sender = (sender or "").lower().strip()
     subject = (subject or "").lower()
     content = (content or "").lower()
 
+    # Block sender patterns
     for pattern in BLOCKED_SENDER_PATTERNS:
 
         if pattern in sender:
@@ -54,6 +84,7 @@ def should_process_email(
                 "reason": "system_sender",
             }
 
+    # Block domains
     if "@" in sender:
 
         domain = sender.split("@")[-1]
@@ -72,6 +103,7 @@ def should_process_email(
                     "reason": "blocked_domain",
                 }
 
+    # Block subjects
     for keyword in BLOCKED_SUBJECT_KEYWORDS:
 
         if keyword in subject:
@@ -81,6 +113,7 @@ def should_process_email(
                 "reason": "newsletter",
             }
 
+    # Block content
     for keyword in BLOCKED_CONTENT_KEYWORDS:
 
         if keyword in content:
@@ -89,6 +122,17 @@ def should_process_email(
                 "process": False,
                 "reason": "marketing_content",
             }
+
+    # MUST contain sales intent
+    if not has_sales_intent(
+        subject,
+        content
+    ):
+
+        return {
+            "process": False,
+            "reason": "no_sales_intent",
+        }
 
     return {
         "process": True,

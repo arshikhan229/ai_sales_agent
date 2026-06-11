@@ -5,10 +5,6 @@ def create_opportunity_from_lead(
     erpnext_lead,
     intent_type=None
 ):
-    """
-    Create ERPNext Opportunity
-    from ERPNext Lead
-    """
 
     if not erpnext_lead:
         return None
@@ -63,7 +59,7 @@ def create_opportunity_from_lead(
             f"{erpnext_lead.lead_name} Opportunity",
 
         "contact_email":
-            erpnext_lead.email_id
+            erpnext_lead.email_id or ""
     })
 
     opportunity.insert(

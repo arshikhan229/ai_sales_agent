@@ -40,13 +40,20 @@ def process_communication(doc, method=None):
         if not content:
             return
 
+        auto_reply = True
+
         result = process_inbound_message(
             channel="Email",
             message=content,
             email=sender,
             subject=subject,
             communication_doc=doc,
-            auto_reply=False,
+            auto_reply=auto_reply,
+            reply_target={
+                "email": sender,
+                "sender": sender,
+                "subject": subject
+            }
         )
 
         if result.get("success"):
