@@ -93,10 +93,11 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 					+ '<input type="text" id="inbox-search" class="form-control" placeholder="Search Contact...">'
 					+ '</div>';
 
-				html += '<div style="margin-bottom:15px;">'
+					html += '<div style="margin-bottom:15px;">'
 					+ '<button class="btn btn-sm btn-default filter-btn" data-filter="all">All</button> '
 					+ '<button class="btn btn-sm btn-danger filter-btn" data-filter="Open Handoffs">👤 Open Handoffs</button> '
 					+ '<button class="btn btn-sm btn-primary filter-btn" data-filter="Assigned To Me">👤 Assigned To Me</button> '
+					+ '<button class="btn btn-sm btn-primary filter-btn" data-filter="My Leads">📌 My Leads</button> '
 					+ '<button class="btn btn-sm btn-primary filter-btn" data-filter="WhatsApp">📱 WhatsApp</button> '
 					+ '<button class="btn btn-sm btn-info filter-btn" data-filter="Facebook">📘 Facebook</button> '
 					+ '<button class="btn btn-sm btn-success filter-btn" data-filter="Email">📧 Email</button> '
@@ -116,6 +117,10 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 					+ '<th style="min-width:120px;">Category</th>'
 					+ '<th style="min-width:120px;">ICP</th>'
 					+ '<th style="min-width:140px;">Opportunity</th>'
+					+ '<th style="min-width:140px;">SLA</th>'
+					+ '<th style="min-width:100px;">Follow-ups</th>'
+					+ '<th style="min-width:160px;">Last Follow-up</th>'
+					+ '<th style="min-width:160px;">Next Due</th>'
 					+ '<th style="min-width:260px;">Handoff</th>'
 					+ '<th style="min-width:180px;">Assigned</th>'
 					+ '<th style="min-width:80px;text-align:center;">Tasks</th>'
@@ -151,6 +156,15 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 							}
 							// link to handoff
 							handoff_html = '<a href="/app/ai-handoff/' + row.handoff_name + '" target="_blank" style="text-decoration:none;">' + handoff_html + '</a>';
+
+							// Claim button: show only when handoff exists and status is Open
+							try {
+								if ((row.handoff_status || '').toLowerCase() === 'open') {
+									handoff_html += ' <button class="btn btn-sm btn-outline-primary claim-handoff" data-handoff="' + row.handoff_name + '">📌 Claim Lead</button>';
+								}
+							} catch (e) {
+								// ignore
+							}
 						}
 
 					html += '<tr style="' + rowStyle + '" data-handoff-name="' + (row.handoff_name || '') + '" data-handoff-status="' + (row.handoff_status || '') + '" data-handoff-assigned="' + (row.handoff_assigned_to || '') + '">';
@@ -162,6 +176,11 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 					html += '<td style="min-width:120px;">' + get_category_badge(row.lead_category) + '</td>';
 					html += '<td style="min-width:120px;">' + get_icp_bar(row.icp_score) + '</td>';
 					html += '<td style="min-width:140px;">' + opportunity_html + '</td>';
+					html += '<td style="min-width:140px;">' + opportunity_html + '</td>';
+					html += '<td style="min-width:140px;">' + (row.sla_status || '') + '</td>';
+					html += '<td style="min-width:100px;text-align:center;">' + (row.followup_count || 0) + '</td>';
+					html += '<td style="min-width:160px;">' + (row.last_followup_at ? frappe.datetime.str_to_user(row.last_followup_at) : '') + '</td>';
+					html += '<td style="min-width:160px;">' + (row.next_followup_due ? frappe.datetime.str_to_user(row.next_followup_due) : '') + '</td>';
 					html += '<td style="min-width:260px;white-space:normal;">' + handoff_html + '</td>';
 					html += '<td style="min-width:180px;white-space:nowrap;">' + (row.assigned_to || '') + '</td>';
 					html += '<td style="min-width:80px;text-align:center;">' + (row.todo_count || 0) + '</td>';
@@ -199,6 +218,15 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 						return;
 					}
 
+					if (filter === 'My Leads') {
+						let me = (frappe.session && frappe.session.user) ? frappe.session.user.toLowerCase() : '';
+						$('#inbox-table tbody tr').each(function() {
+							let assigned = ($(this).attr('data-handoff-assigned') || '').toLowerCase();
+							if (!assigned || assigned.indexOf(me) === -1) $(this).hide();
+						});
+						return;
+					}
+
 					// Fallback text search for other filters
 					$('#inbox-table tbody tr').each(function() {
 						let text = $(this).text().toLowerCase();
@@ -217,6 +245,26 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 					e.preventDefault();
 					let contact = $(this).data('contact');
 					open_timeline(contact);
+				});
+
+				// Claim handoff handler
+				$(page.body).on('click', '.claim-handoff', function(e) {
+					e.preventDefault();
+					let handoff = $(this).data('handoff');
+					if (!handoff) return;
+					frappe.call({
+						method: 'ai_sales_agent.ai_sales_agent.utils.claim_engine.claim_handoff',
+						args: { handoff_name: handoff },
+						callback: function(r) {
+							let res = r.message || {};
+							if (res.status === 'success') {
+								frappe.msgprint({message: 'Lead claimed successfully', indicator: 'green'});
+								load_inbox(page);
+							} else {
+								frappe.msgprint({message: 'Failed to claim lead: ' + (res.message || 'unknown'), indicator: 'red'});
+							}
+						}
+					});
 				});
 			}
 		});

@@ -7,8 +7,16 @@ app_license = "mit"
 
 doc_events = {
     "Communication": {
-        "after_insert":
-        "ai_sales_agent.ai_sales_agent.utils.communication_processor.process_communication"
+        "after_insert": "ai_sales_agent.ai_sales_agent.utils.hook_handlers.communication_after_insert"
+    },
+    "ToDo": {
+        "on_update": "ai_sales_agent.ai_sales_agent.utils.followup_tracker.on_todo_update"
+    },
+    "Opportunity": {
+        "on_update": "ai_sales_agent.ai_sales_agent.utils.followup_tracker.on_opportunity_update"
+    },
+    "Comment": {
+        "after_insert": "ai_sales_agent.ai_sales_agent.utils.followup_tracker.on_comment"
     }
 }
 
@@ -172,9 +180,9 @@ ignore_csrf = [
 # 	"daily": [
 # 		"ai_sales_agent.tasks.daily"
 # 	],
-# 	"hourly": [
-# 		"ai_sales_agent.tasks.hourly"
-# 	],
+#  "hourly": [
+#   "ai_sales_agent.tasks.hourly"
+#  ],
 # 	"weekly": [
 # 		"ai_sales_agent.tasks.weekly"
 # 	],
@@ -182,6 +190,13 @@ ignore_csrf = [
 # 		"ai_sales_agent.tasks.monthly"
 # 	],
 # }
+
+# SLA monitoring scheduler
+scheduler_events = {
+    "hourly": [
+        "ai_sales_agent.ai_sales_agent.utils.sla_monitor.run_sla_checks"
+    ]
+}
 
 # Testing
 # -------

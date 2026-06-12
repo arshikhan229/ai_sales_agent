@@ -289,6 +289,21 @@ def get_inbox():
                 handoff_status = handoffs[0].get("status") or ""
                 handoff_assigned_to = handoffs[0].get("assigned_to") or ""
 
+                # fetch follow-up and SLA fields
+                try:
+                    hdoc = frappe.get_doc("AI Handoff", handoff_name)
+                    followup_count = getattr(hdoc, "followup_count", 0) or 0
+                    last_followup_at = getattr(hdoc, "last_followup_at", "") or ""
+                    next_followup_due = getattr(hdoc, "next_followup_due", "") or ""
+                    sla_status = getattr(hdoc, "sla_status", "") or ""
+                    days_open = getattr(hdoc, "days_open", 0) or 0
+                except Exception:
+                    followup_count = 0
+                    last_followup_at = ""
+                    next_followup_due = ""
+                    sla_status = ""
+                    days_open = 0
+
                 # log found handoff
                 try:
                     frappe.logger().info(
@@ -341,6 +356,12 @@ def get_inbox():
 
             "handoff_assigned_to":
                 handoff_assigned_to,
+
+                "followup_count": followup_count,
+                "last_followup_at": last_followup_at,
+                "next_followup_due": next_followup_due,
+                "sla_status": sla_status,
+                "days_open": days_open,
 
             "has_handoff":
                 bool(handoff_name),

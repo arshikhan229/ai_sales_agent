@@ -39,3 +39,25 @@ This app can use GitHub Actions for CI. The following workflows are configured:
 ### License
 
 mit
+
+## Recent Work / Changelog
+Summary of recent improvements (v0.9 — stabilization):
+
+This release focuses on improving lead quality, adding a human handoff workflow, and increasing observability in the inbox.
+
+Highlights
+
+- Sales-intent filtering: Heuristics now distinguish sales-focused messages from marketing/newsletter content to reduce false-positive leads.
+- Human handoff workflow: Introduced the `AI Handoff` DocType and the `ai_sales_agent.utils.handoff_rules` utility to decide, create, and assign handoffs when human attention is required.
+- Pipeline integration: `channel_processor` evaluates `should_handoff()` and creates handoffs with idempotent checks and guarded error handling to avoid duplicates and failures.
+- Observability: Added structured audit logging around AI analysis, handoff decisions, and handoff creation to simplify troubleshooting of edge cases.
+- Inbox backend & API: `ai_inbox.py` now returns per-row handoff metadata (`handoff_name`, `handoff_status`, `handoff_assigned_to`, `has_handoff`) and aggregate counters for open/total handoffs.
+- Inbox UI enhancements: `ai_inbox.js` includes KPI cards, interactive filters (Open Handoffs, Assigned To Me, channel/category), and a responsive handoff column featuring badges and links.
+- Developer utility: `debug_inspect_lead(lead_name)` helper available for non-interactive inspection via `bench execute` to reproduce and diagnose problematic leads.
+
+Notes
+
+- Database impact: Adds the `AI Handoff` DocType; no other breaking schema changes expected.
+- Suggested next steps: Move this summary into a dedicated `CHANGELOG.md` and annotate entries with commit SHAs and dates for release tracking.
+
+If you'd like, I can create `CHANGELOG.md` and populate it with commit references and timestamps.

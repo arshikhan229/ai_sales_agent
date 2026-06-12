@@ -1,5 +1,9 @@
 import frappe
 
+from ai_sales_agent.ai_sales_agent.utils.handoff_engine import (
+    create_followup_todo
+)
+
 
 SALES_INTENT_KEYWORDS = [
     "pricing",
@@ -141,7 +145,26 @@ def create_handoff(lead, contact, channel, conversation, opportunity, analysis):
     try:
         frappe.logger().info(f"CREATING HANDOFF => lead={lead}")
         handoff.insert(ignore_permissions=True)
+
+        # Create follow-up task for salesperson
+        if opportunity:
+            try:
+                todo = create_followup_todo(
+                    opportunity=opportunity,
+                    assigned_user=assigned,
+                    ai_lead=lead
+                )
+
+                frappe.logger().info(f"FOLLOWUP TODO CREATED => {todo}")
+
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    "FOLLOWUP TODO ERROR"
+                )
+
         frappe.db.commit()
+
         frappe.logger().info(f"HANDOFF CREATED => {handoff.name}")
         return handoff.name
 

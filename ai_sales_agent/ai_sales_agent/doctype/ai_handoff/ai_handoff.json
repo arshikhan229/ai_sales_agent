@@ -1,83 +1,110 @@
 {
- "doctype": "DocType",
- "name": "AI Handoff",
- "module": "AI Sales Agent",
- "custom": 1,
- "fields": [
-  {
-   "fieldname": "lead",
-   "fieldtype": "Link",
-   "label": "Lead",
-   "options": "AI Lead"
-  },
-  {
-   "fieldname": "contact",
-   "fieldtype": "Link",
-   "label": "Contact",
-   "options": "Contact"
-  },
-  {
-   "fieldname": "channel",
-   "fieldtype": "Data",
-   "label": "Channel"
-  },
-  {
-   "fieldname": "assigned_to",
-   "fieldtype": "Link",
-   "label": "Assigned To",
-   "options": "User"
-  },
-  {
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "Open\nAssigned\nIn Progress\nClosed"
-  },
-  {
-   "fieldname": "priority",
-   "fieldtype": "Select",
-   "label": "Priority",
-   "options": "Low\nMedium\nHigh\nCritical"
-  },
-  {
-   "fieldname": "conversation",
-   "fieldtype": "Link",
-   "label": "Conversation",
-   "options": "CRM Conversation"
-  },
-  {
-   "fieldname": "opportunity",
-   "fieldtype": "Link",
-   "label": "Opportunity",
-   "options": "Opportunity"
-  },
-  {
-   "fieldname": "notes",
-   "fieldtype": "Small Text",
-   "label": "Notes"
-  },
-  {
-   "fieldname": "created_from_intent",
-   "fieldtype": "Data",
-   "label": "Created From Intent"
-  },
-  {
-   "fieldname": "created_from_category",
-   "fieldtype": "Data",
-   "label": "Created From Category"
-  }
- ],
- "permissions": [
-  {
-   "role": "System Manager",
-   "read": 1,
-   "write": 1,
-   "create": 1,
-   "delete": 1
-  }
- ],
- "autoname": "hash",
- "track_changes": 1,
- "search_fields": "lead,contact,opportunity",
- "module": "AI Sales Agent"
+  "doctype": "DocType",
+  "name": "AI Handoff",
+  "module": "AI Sales Agent",
+  "custom": 1,
+  "fields": [
+    {
+      "fieldname": "lead",
+      "fieldtype": "Link",
+      "label": "Lead",
+      "options": "AI Lead"
+    },
+    {
+      "fieldname": "contact",
+      "fieldtype": "Link",
+      "label": "Contact",
+      "options": "Contact"
+    },
+    {
+      "fieldname": "channel",
+      "fieldtype": "Data",
+      "label": "Channel"
+    },
+    {
+      "fieldname": "assigned_to",
+      "fieldtype": "Link",
+      "label": "Assigned To",
+      "options": "User"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Open\nAssigned\nWaiting Follow-Up\nFollowed Up\nQualified\nClosed Won\nClosed Lost\nClosed"
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority",
+      "options": "Low\nMedium\nHigh\nCritical"
+    },
+    {
+      "fieldname": "conversation",
+      "fieldtype": "Link",
+      "label": "Conversation",
+      "options": "CRM Conversation"
+    },
+    {
+      "fieldname": "opportunity",
+      "fieldtype": "Link",
+      "label": "Opportunity",
+      "options": "Opportunity"
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Notes"
+    },
+    {
+      "fieldname": "created_from_intent",
+      "fieldtype": "Data",
+      "label": "Created From Intent"
+    },
+    {
+      "fieldname": "created_from_category",
+      "fieldtype": "Data",
+      "label": "Created From Category"
+    },
+    {
+      "fieldname": "last_followup_at",
+      "fieldtype": "Datetime",
+      "label": "Last Follow-up At"
+    },
+    {
+      "fieldname": "followup_count",
+      "fieldtype": "Int",
+      "label": "Follow-up Count",
+      "default": 0
+    },
+    {
+      "fieldname": "next_followup_due",
+      "fieldtype": "Datetime",
+      "label": "Next Follow-up Due"
+    },
+    {
+      "fieldname": "sla_status",
+      "fieldtype": "Data",
+      "label": "SLA Status"
+    },
+    {
+      "fieldname": "days_open",
+      "fieldtype": "Int",
+      "label": "Days Open",
+      "default": 0
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ],
+  "autoname": "hash",
+  "track_changes": 1,
+  "search_fields": "lead,contact,opportunity",
+  "module": "AI Sales Agent"
 }
