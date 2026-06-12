@@ -1,0 +1,83 @@
+{
+ "doctype": "DocType",
+ "name": "AI Handoff",
+ "module": "AI Sales Agent",
+ "custom": 1,
+ "fields": [
+  {
+   "fieldname": "lead",
+   "fieldtype": "Link",
+   "label": "Lead",
+   "options": "AI Lead"
+  },
+  {
+   "fieldname": "contact",
+   "fieldtype": "Link",
+   "label": "Contact",
+   "options": "Contact"
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Data",
+   "label": "Channel"
+  },
+  {
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "label": "Assigned To",
+   "options": "User"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nAssigned\nIn Progress\nClosed"
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priority",
+   "options": "Low\nMedium\nHigh\nCritical"
+  },
+  {
+   "fieldname": "conversation",
+   "fieldtype": "Link",
+   "label": "Conversation",
+   "options": "CRM Conversation"
+  },
+  {
+   "fieldname": "opportunity",
+   "fieldtype": "Link",
+   "label": "Opportunity",
+   "options": "Opportunity"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "created_from_intent",
+   "fieldtype": "Data",
+   "label": "Created From Intent"
+  },
+  {
+   "fieldname": "created_from_category",
+   "fieldtype": "Data",
+   "label": "Created From Category"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  }
+ ],
+ "autoname": "hash",
+ "track_changes": 1,
+ "search_fields": "lead,contact,opportunity",
+ "module": "AI Sales Agent"
+}

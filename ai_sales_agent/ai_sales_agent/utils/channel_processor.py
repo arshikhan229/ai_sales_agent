@@ -32,9 +32,10 @@ from ai_sales_agent.ai_sales_agent.utils.email_sender import (
     send_email_reply,
 )
 
-# from ai_sales_agent.ai_sales_agent.utils.handoff_engine import (
-#     trigger_handoff,
-# )
+from ai_sales_agent.ai_sales_agent.utils.handoff_rules import (
+    should_handoff,
+    create_handoff,
+)
 
 
 ALLOWED_CHANNELS = frozenset({
@@ -259,16 +260,92 @@ def process_inbound_message(
             lead_category=lead_category,
         )
 
-        # Temporary v0.8 fix: comment out handoff trigger to avoid NameError
-        # if (
-        #     lead_category == "Hot"
-        #     and erp_opportunity
-        # ):
-        #     trigger_handoff(
-        #         ai_lead=lead,
-        #         erp_lead=erp_lead,
-        #         opportunity=erp_opportunity
-        #     )
+        # Create AI Handoff if analysis indicates handoff (safe, non-blocking)
+        try:
+            # Existing debug - will remain for quick traces
+            frappe.logger().info(
+                f"HANDOFF DEBUG => lead_category={lead_category}, "
+                f"erp_opportunity={erp_opportunity}, "
+                f"lead={lead.name}"
+            )
+
+            # Compute handoff decision once and audit-log the AI flow for debugging
+
+            # debug logs requested for deeper inspection
+            try:
+                frappe.logger().info(f"DEBUG LEAD => {lead.name}")
+            except Exception:
+                pass
+
+            try:
+                frappe.logger().info(f"DEBUG CATEGORY => {lead_category}")
+            except Exception:
+                pass
+
+            try:
+                frappe.logger().info(f"DEBUG ANALYSIS => {analysis}")
+            except Exception:
+                pass
+
+            do_handoff = False
+            try:
+                do_handoff = bool(should_handoff(analysis))
+            except Exception:
+                # If rules evaluation fails, log and proceed without blocking
+                frappe.log_error(frappe.get_traceback(), "SHOULD_HANDOFF EVAL ERROR")
+
+            try:
+                frappe.logger().info(f"SHOULD_HANDOFF => {do_handoff}")
+            except Exception:
+                pass
+
+            frappe.logger().info(
+                f"""
+                AI FLOW
+                lead={lead.name}
+                category={lead_category}
+                opportunity={erp_opportunity}
+                handoff={do_handoff}
+                """
+            )
+
+            if do_handoff:
+                try:
+                    try:
+                        frappe.logger().info(f"CREATING HANDOFF FOR {lead.name}")
+                    except Exception:
+                        pass
+
+                    handoff = create_handoff(
+                        lead=lead.name,
+                        contact=contact_name,
+                        channel=channel,
+                        conversation=conversation_name,
+                        opportunity=erp_opportunity,
+                        analysis=analysis,
+                    )
+
+                    frappe.logger().info(
+                        f"HANDOFF CREATED => {getattr(handoff, 'name', handoff)}"
+                    )
+
+                    # Additional audit log for handoff result
+                    try:
+                        frappe.logger().info(
+                            f"HANDOFF RESULT => {handoff}"
+                        )
+                    except Exception:
+                        # Best effort logging, don't let this block the flow
+                        frappe.logger().info("HANDOFF RESULT => <unserializable>")
+
+                except Exception:
+                    frappe.log_error(
+                        frappe.get_traceback(),
+                        "HANDOFF CREATION ERROR"
+                    )
+
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "HANDOFF RULES ERROR")
 
         frappe.logger().info(
             f"CHANNEL PROCESSOR SUCCESS => {channel}"

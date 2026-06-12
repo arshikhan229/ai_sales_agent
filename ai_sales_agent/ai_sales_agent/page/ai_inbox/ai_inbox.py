@@ -17,6 +17,15 @@ def get_inbox():
 
     results = []
 
+    # Counters
+    total_handoffs = frappe.db.count("AI Handoff")
+    open_handoffs = frappe.db.sql(
+        "SELECT COUNT(*) FROM `tabAI Handoff` WHERE status != %s",
+        ("Closed",),
+    )
+
+    open_handoffs = (open_handoffs[0][0] if open_handoffs else 0) or 0
+
     for row in contacts:
 
         latest = frappe.db.sql("""
@@ -248,6 +257,53 @@ def get_inbox():
                     todo[0].allocated_to
                 )
 
+        # =====================================
+        # AI HANDOFF LOOKUP
+        # =====================================
+
+        handoff_name = ""
+        handoff_status = ""
+        handoff_assigned_to = ""
+
+        if ai_lead_name:
+            # Audit: log lookup key (AI Lead.name)
+            try:
+                frappe.logger().info(
+                    f"INBOX HANDOFF LOOKUP => lead={ai_lead_name}"
+                )
+            except Exception:
+                pass
+
+            handoffs = frappe.get_all(
+                "AI Handoff",
+                filters=[
+                    ["AI Handoff", "lead", "=", ai_lead_name],
+                    ["AI Handoff", "status", "!=", "Closed"],
+                ],
+                fields=["name", "status", "assigned_to"],
+                limit=1,
+            )
+
+            if handoffs:
+                handoff_name = handoffs[0].get("name") or ""
+                handoff_status = handoffs[0].get("status") or ""
+                handoff_assigned_to = handoffs[0].get("assigned_to") or ""
+
+                # log found handoff
+                try:
+                    frappe.logger().info(
+                        f"FOUND HANDOFF => {handoff_name}"
+                    )
+                except Exception:
+                    pass
+
+                # prefer handoff assigned_to over todo assigned
+                if handoff_assigned_to:
+                    assigned_to = handoff_assigned_to
+                has_handoff = True
+            else:
+                has_handoff = False
+
         results.append({
 
             "contact":
@@ -276,6 +332,18 @@ def get_inbox():
 
             "opportunity":
                 opportunity,
+
+            "handoff_name":
+                handoff_name,
+
+            "handoff_status":
+                handoff_status,
+
+            "handoff_assigned_to":
+                handoff_assigned_to,
+
+            "has_handoff":
+                bool(handoff_name),
 
             "assigned_to":
                 assigned_to,
@@ -318,7 +386,11 @@ def get_inbox():
         reverse=True
     )
 
-    return results
+    return {
+        "rows": results,
+        "total_handoffs": total_handoffs,
+        "open_handoffs": open_handoffs,
+    }
 
 
 @frappe.whitelist()
@@ -359,3 +431,70 @@ def get_contact_timeline(contact):
         ],
         order_by="timestamp asc"
     )
+
+
+@frappe.whitelist()
+def get_handoffs(filter_type=None):
+    """Return handoffs for the inbox with simple filters.
+
+    filter_type: Open | Assigned To Me | All
+    """
+    filters = {}
+
+    if filter_type == "Open":
+        filters["status"] = "Open"
+
+    elif filter_type == "Assigned To Me":
+        filters["assigned_to"] = frappe.session.user
+
+    # else: All (no additional filters)
+
+    handoffs = frappe.get_all(
+        "AI Handoff",
+        filters=filters,
+        fields=[
+            "name",
+            "lead",
+            "contact",
+            "channel",
+            "assigned_to",
+            "status",
+            "priority",
+            "opportunity",
+            "creation",
+        ],
+        order_by="creation desc",
+        limit=500,
+    )
+
+    return handoffs
+
+
+@frappe.whitelist()
+def assign_handoff_to_me(handoff):
+    if not handoff:
+        return {
+            "success": False,
+            "error": "missing_handoff",
+        }
+
+    doc = frappe.get_doc("AI Handoff", handoff)
+    doc.assigned_to = frappe.session.user
+    doc.status = "Assigned"
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"success": True, "handoff": handoff}
+
+
+@frappe.whitelist()
+def close_handoff(handoff):
+    if not handoff:
+        return {"success": False, "error": "missing_handoff"}
+
+    doc = frappe.get_doc("AI Handoff", handoff)
+    doc.status = "Closed"
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"success": True, "handoff": handoff}
