@@ -213,6 +213,41 @@ def get_inbox():
                     "name"
                 ) or ""
 
+        assigned_to = ""
+
+        todo_count = 0
+
+        if opportunity:
+
+            todo_count = frappe.db.count(
+                "ToDo",
+                {
+                    "reference_type":
+                        "Opportunity",
+
+                    "reference_name":
+                        opportunity
+                }
+            )
+
+            todo = frappe.get_all(
+                "ToDo",
+                filters={
+                    "reference_type":
+                        "Opportunity",
+
+                    "reference_name":
+                        opportunity
+                },
+                fields=["allocated_to"],
+                limit=1
+            )
+
+            if todo:
+                assigned_to = (
+                    todo[0].allocated_to
+                )
+
         results.append({
 
             "contact":
@@ -241,6 +276,12 @@ def get_inbox():
 
             "opportunity":
                 opportunity,
+
+            "assigned_to":
+                assigned_to,
+
+            "todo_count":
+                todo_count,
 
             "last_activity":
                 row.last_activity

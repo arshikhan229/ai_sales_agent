@@ -32,6 +32,10 @@ from ai_sales_agent.ai_sales_agent.utils.email_sender import (
     send_email_reply,
 )
 
+# from ai_sales_agent.ai_sales_agent.utils.handoff_engine import (
+#     trigger_handoff,
+# )
+
 
 ALLOWED_CHANNELS = frozenset({
     "WhatsApp",
@@ -254,6 +258,17 @@ def process_inbound_message(
             email=contact_email,
             lead_category=lead_category,
         )
+
+        # Temporary v0.8 fix: comment out handoff trigger to avoid NameError
+        # if (
+        #     lead_category == "Hot"
+        #     and erp_opportunity
+        # ):
+        #     trigger_handoff(
+        #         ai_lead=lead,
+        #         erp_lead=erp_lead,
+        #         opportunity=erp_opportunity
+        #     )
 
         frappe.logger().info(
             f"CHANNEL PROCESSOR SUCCESS => {channel}"

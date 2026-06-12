@@ -257,6 +257,10 @@ function load_inbox(page) {
 
 							<th>Opportunity</th>
 
+							<th>Assigned</th>
+
+							<th>Tasks</th>
+
 							<th>Last Activity</th>
 
 						</tr>
@@ -301,7 +305,7 @@ function load_inbox(page) {
 
 						</td>
 
-						<td>
+							<td>
 							${get_channel_label(
 								row.channel
 							)}
@@ -355,7 +359,14 @@ function load_inbox(page) {
 						</td>
 
 						<td>
+							${row.assigned_to || ""}
+						</td>
 
+						<td>
+							${row.todo_count || 0}
+						</td>
+
+						<td>
 							${frappe.datetime.str_to_user(
 								row.last_activity || ""
 							)}
