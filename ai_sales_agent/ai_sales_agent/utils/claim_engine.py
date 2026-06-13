@@ -51,3 +51,75 @@ def claim_handoff(handoff_name):
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "claim_handoff_error")
         return {"status": "error", "message": str(e)}
+
+
+@frappe.whitelist()
+def close_handoff(handoff_name, outcome=None, note=None):
+    """Close an AI Handoff with an outcome (Closed Won / Closed Lost) and optional note.
+
+    This will:
+      - set `status` on the AI Handoff
+      - append the note to `notes`
+      - mark linked ToDo items as Closed
+      - insert a CRM Conversation record with closure event
+    """
+    try:
+        if not handoff_name:
+            return {"status": "error", "message": "handoff_name is required"}
+
+        h = frappe.get_doc("AI Handoff", handoff_name)
+
+        outcome = (outcome or "").strip()
+        if outcome not in ("Closed Won", "Closed Lost"):
+            outcome = "Closed"
+
+        h.status = outcome
+
+        # append closure note
+        if note:
+            existing = h.get("notes") or ""
+            h.notes = (existing + "\n\n[Closed] " + note).strip()
+
+        h.save(ignore_permissions=True)
+
+        # mark linked ToDo records as Closed
+        todos = frappe.get_all(
+            "ToDo",
+            filters={"reference_type": "AI Handoff", "reference_name": h.name},
+            fields=["name"],
+        )
+        # Use direct DB updates to avoid schema differences between installs
+        for t in todos:
+            try:
+                # set status column if present
+                if frappe.db.has_column('tabToDo', 'status'):
+                    frappe.db.set_value('ToDo', t.name, 'status', 'Closed')
+
+                # set completed flag if present
+                if frappe.db.has_column('tabToDo', 'completed'):
+                    frappe.db.set_value('ToDo', t.name, 'completed', 1)
+
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "close_handoff:todo_close_error")
+
+        # insert CRM Conversation entry to note the closure
+        try:
+            conv = frappe.get_doc({
+                "doctype": "CRM Conversation",
+                "contact": h.contact,
+                "channel": h.channel or 'System',
+                "direction": "Outgoing",
+                "message": f"Handoff closed: {outcome}. {note or ''}",
+                "source": "AI Sales Agent",
+            })
+            conv.insert(ignore_permissions=True)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "close_handoff_conv_error")
+
+        frappe.db.commit()
+
+        return {"status": "success", "message": "Handoff closed", "handoff_name": h.name, "status_value": h.status}
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "close_handoff_error")
+        return {"status": "error", "message": str(e)}

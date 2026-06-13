@@ -425,6 +425,7 @@ def get_inbox():
     }
 
 
+
 @frappe.whitelist()
 def get_contact_timeline(contact):
 
@@ -463,6 +464,46 @@ def get_contact_timeline(contact):
         ],
         order_by="timestamp asc"
     )
+
+
+@frappe.whitelist()
+def get_workspace_data(handoff_name):
+
+    if not handoff_name:
+        return {"error": "missing_handoff_name"}
+
+    try:
+        handoff = frappe.get_doc("AI Handoff", handoff_name)
+
+        conversations = frappe.get_all(
+            "CRM Conversation",
+            filters={"contact": handoff.contact},
+            fields=["channel", "direction", "message", "timestamp"],
+            order_by="timestamp desc",
+            limit=50,
+        )
+
+        todos = []
+        if getattr(handoff, "assigned_to", None):
+            todos = frappe.get_all(
+                "ToDo",
+                filters={"allocated_to": handoff.assigned_to},
+                fields=["name", "description", "status"],
+            )
+
+        return {
+            "handoff": handoff.as_dict(),
+            "timeline": conversations,
+            "todos": todos,
+            "copilot": {
+                "reply": handoff.get("ai_suggested_reply"),
+                "action": handoff.get("next_best_action"),
+            },
+        }
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "get_workspace_data_error")
+        return {"error": "exception"}
 
 
 @frappe.whitelist()

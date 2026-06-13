@@ -168,6 +168,13 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 							} catch (e) {
 								// ignore
 							}
+
+							// Workspace button
+							try {
+								handoff_html += ' <button class="btn btn-primary btn-sm open-workspace" data-handoff="' + row.handoff_name + '">Workspace</button>';
+							} catch (e) {
+								// ignore
+							}
 						}
 
 					html += '<tr style="' + rowStyle + '" data-handoff-name="' + (row.handoff_name || '') + '" data-handoff-status="' + (row.handoff_status || '') + '" data-handoff-assigned="' + (row.handoff_assigned_to || '') + '">';
@@ -399,5 +406,237 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 				frappe.msgprint({ title: contact, message: html, wide: true });
 			}
 		});
+	}
+
+
+	function open_workspace(handoff_name) {
+
+		frappe.call({
+			method: "ai_sales_agent.ai_sales_agent.page.ai_inbox.ai_inbox.get_workspace_data",
+			args: { handoff_name: handoff_name },
+			callback: function(r) {
+						console.log("WORKSPACE DATA", r.message);
+						let d = r.message || {};
+
+						let html = `
+					<div style="padding:15px">
+
+						<h3>Customer Profile</h3>
+
+						<p><b>Contact:</b> ${d.handoff.contact || "-"}</p>
+						<p><b>Channel:</b> ${d.handoff.channel || "-"}</p>
+						<p><b>Lead Category:</b> ${d.handoff.created_from_category || "-"}</p>
+						<p><b>Intent:</b> ${d.handoff.created_from_intent || "-"}</p>
+
+						<hr>
+
+						<h3>Opportunity</h3>
+
+						<p><b>Opportunity:</b> ${d.handoff.opportunity || "-"}</p>
+
+						<hr>
+
+						<h3>AI Sales Copilot</h3>
+
+						<p>
+							<b>Next Action:</b>
+							<span id="copilot_next_action">${d.copilot && d.copilot.action ? d.copilot.action : "-"}</span>
+						</p>
+
+						<textarea
+							id="copilot_reply"
+							style="width:100%;height:120px"
+						>
+${d.copilot && d.copilot.reply ? d.copilot.reply : ""}
+						</textarea>
+
+						<div style="margin-top:10px">
+
+							<button class="btn btn-primary" id="send_copilot_reply">Send Reply</button>
+							<button class="btn btn-secondary" id="regenerate_copilot_reply" style="margin-left:8px;">Regenerate AI Reply</button>
+							<button class="btn btn-outline-primary" id="claim_workspace_handoff" style="margin-left:8px;">📌 Claim Lead</button>
+
+							<button class="btn btn-outline-secondary" id="close_workspace_handoff" style="margin-left:8px;">Close Handoff</button>
+
+						</div>
+
+						<hr>
+
+						<h3>Timeline</h3>
+
+						<div id="timeline_container"></div>
+
+						<hr>
+
+						<h3>Sales Operations</h3>
+
+						<p><b>SLA:</b> ${d.handoff.sla_status || ""}</p>
+						<p><b>Followups:</b> ${d.handoff.followup_count || 0}</p>
+						<p><b>Open Tasks:</b> ${Array.isArray(d.todos) ? d.todos.length : 0}</p>
+
+					</div>
+					`;
+
+					let timeline_html = "";
+					(d.timeline || []).forEach(row => {
+						timeline_html += `
+							<div style="border-bottom:1px solid #ddd;padding:8px;">
+
+								<b>${row.channel || ''}</b>
+
+								(${row.direction || ''})
+
+								<br>
+
+								${row.message || ''}
+
+							</div>
+						`;
+					});
+
+					html = html.replace('<div id="timeline_container"></div>', `<div>${timeline_html}</div>`);
+
+					let dialog = new frappe.ui.Dialog({
+						title: "Unified Workspace",
+						size: "extra-large",
+						fields: [
+							{ fieldtype: "HTML", fieldname: "workspace" }
+						]
+					});
+
+					dialog.show();
+					dialog.fields_dict.workspace.$wrapper.html(html);
+
+					// Wire Send button to reply_dispatcher.send_reply and refresh workspace on success
+					$(document).off("click", "#send_copilot_reply");
+					$(document).on("click", "#send_copilot_reply", function() {
+
+						let reply = $("#copilot_reply").val();
+
+						frappe.call({
+							method: "ai_sales_agent.ai_sales_agent.utils.reply_dispatcher.send_reply",
+							args: {
+								channel: d.handoff.channel,
+								contact: d.handoff.contact,
+								message: reply,
+								handoff_name: d.handoff.name
+							},
+							callback: function(r) {
+
+								frappe.show_alert({ message: "Reply Sent", indicator: "green" });
+								console.log(r.message);
+								// Reload workspace to refresh timeline, followups and SLA
+								open_workspace(d.handoff.name);
+							}
+						});
+
+					});
+
+					// Regenerate AI Reply -> call sales_copilot.refresh_ai_reply and update UI in-place
+					$(document).off("click", "#regenerate_copilot_reply");
+					$(document).on("click", "#regenerate_copilot_reply", function() {
+
+						// disable button briefly
+						$('#regenerate_copilot_reply').prop('disabled', true).text('Regenerating...');
+
+						frappe.call({
+							method: "ai_sales_agent.ai_sales_agent.utils.sales_copilot.refresh_ai_reply",
+							args: { handoff_name: d.handoff.name },
+							callback: function(r) {
+								let res = r.message || {};
+								let reply = (res.reply || '');
+								let action = (res.next_action || res.nextAction || res.next_action || '');
+								// update textarea and next action
+								$('#copilot_reply').val(reply);
+								$('#copilot_next_action').text(action || '-');
+								frappe.show_alert({ message: 'AI Reply Regenerated', indicator: 'blue' });
+								$('#regenerate_copilot_reply').prop('disabled', false).text('Regenerate AI Reply');
+							}
+						});
+
+					});
+
+					// Claim Lead button: call claim_engine.claim_handoff and refresh workspace
+					$(document).off("click", "#claim_workspace_handoff");
+					$(document).on("click", "#claim_workspace_handoff", function() {
+
+						let handoff_name = d.handoff && d.handoff.name;
+						if (!handoff_name) return;
+
+						frappe.call({
+							method: 'ai_sales_agent.ai_sales_agent.utils.claim_engine.claim_handoff',
+							args: { handoff_name: handoff_name },
+							callback: function(r) {
+								let res = r.message || {};
+								if (res.status === 'success') {
+									frappe.show_alert({ message: 'Lead claimed', indicator: 'green' });
+									open_workspace(handoff_name);
+								} else {
+									frappe.msgprint({ message: 'Failed to claim lead: ' + (res.message || 'unknown'), indicator: 'red' });
+								}
+							}
+						});
+
+					});
+
+					// Close Handoff button: show modal to pick outcome and optional note
+					$(document).off("click", "#close_workspace_handoff");
+					$(document).on("click", "#close_workspace_handoff", function() {
+
+						let handoff_name = d.handoff && d.handoff.name;
+						if (!handoff_name) return;
+
+						let modal = `
+							<div>
+								<h4>Close Handoff</h4>
+								<p>Select outcome and add optional closing note.</p>
+								<div style="margin-top:8px;">
+									<select id="close_outcome" class="form-control">
+										<option value="Closed Won">Closed Won</option>
+										<option value="Closed Lost">Closed Lost</option>
+										<option value="Closed">Closed</option>
+									</select>
+								</div>
+								<div style="margin-top:8px;">
+									<textarea id="close_note" class="form-control" placeholder="Closing notes (optional)"></textarea>
+								</div>
+								<div style="margin-top:10px;"> 
+									<button class="btn btn-primary" id="confirm_close_handoff">Close Handoff</button>
+									<button class="btn btn-secondary close-close-modal" style="margin-left:8px;">Cancel</button>
+								</div>
+							</div>
+						`;
+
+						frappe.msgprint({ title: 'Close Handoff', message: modal, wide: true });
+
+						$(document).off('click', '#confirm_close_handoff').on('click', '#confirm_close_handoff', function(ev) {
+							ev.preventDefault();
+							let outcome = $('#close_outcome').val();
+							let note = $('#close_note').val();
+
+							frappe.call({
+								method: 'ai_sales_agent.ai_sales_agent.utils.claim_engine.close_handoff',
+								args: { handoff_name: handoff_name, outcome: outcome, note: note },
+								callback: function(r) {
+									let res = r.message || {};
+									if (res.status === 'success') {
+										frappe.show_alert({ message: 'Handoff closed', indicator: 'green' });
+										open_workspace(handoff_name);
+									} else {
+										frappe.msgprint({ message: 'Failed to close handoff: ' + (res.message || 'unknown'), indicator: 'red' });
+									}
+								}
+							});
+						});
+
+						$(document).off('click', '.close-close-modal').on('click', '.close-close-modal', function(ev) {
+							ev.preventDefault();
+							frappe.hide_msgprint();
+						});
+
+					});
+			}
+		});
+
 	}
 
