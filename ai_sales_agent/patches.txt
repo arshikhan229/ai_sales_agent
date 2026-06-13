@@ -4,3 +4,4 @@
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+# ai_sales_agent.ai_sales_agent.patches.add_followup_settings.execute  # disabled temporarily to unblock migrations

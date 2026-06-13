@@ -18,7 +18,10 @@
   "email_password",
   "imap_server",
   "smtp_server",
-  "smtp_port"
+  "smtp_port",
+  "auto_followup_enabled",
+  "followup_delay_days",
+  "max_followup_attempts"
  ],
  "fields": [
   {
@@ -91,6 +94,25 @@
    "fieldtype": "Int",
    "label": "Smtp Port"
   }
+    ,
+    {
+     "fieldname": "auto_followup_enabled",
+     "fieldtype": "Check",
+     "label": "Enable Auto Follow-up",
+     "default": 0
+    },
+    {
+     "fieldname": "followup_delay_days",
+     "fieldtype": "Int",
+     "label": "Follow-up Delay Days",
+     "default": 7
+    },
+    {
+     "fieldname": "max_followup_attempts",
+     "fieldtype": "Int",
+     "label": "Max Follow-up Attempts",
+     "default": 3
+    }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,

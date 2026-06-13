@@ -198,6 +198,12 @@ scheduler_events = {
     ]
 }
 
+# Add daily follow-up scheduler
+scheduler_events.setdefault("daily", [])
+scheduler_events["daily"].append(
+    "ai_sales_agent.ai_sales_agent.followup.followup_scheduler.run_daily_followups"
+)
+
 # Testing
 # -------
 
