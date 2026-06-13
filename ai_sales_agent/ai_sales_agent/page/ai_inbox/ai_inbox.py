@@ -1,4 +1,5 @@
 import frappe
+from datetime import datetime
 
 
 @frappe.whitelist()
@@ -407,10 +408,18 @@ def get_inbox():
         else:
             priority = 1
 
+        # normalize last_activity to numeric timestamp so None is comparable
+        la = item.get("last_activity")
+        try:
+            ts = la.timestamp() if la else 0
+        except Exception:
+            # if la is not a datetime, fallback to 0
+            ts = 0
+
         return (
             priority,
             item.get("icp_score", 0),
-            item.get("last_activity")
+            ts
         )
 
     results.sort(
