@@ -297,12 +297,16 @@ def get_inbox():
                     next_followup_due = getattr(hdoc, "next_followup_due", "") or ""
                     sla_status = getattr(hdoc, "sla_status", "") or ""
                     days_open = getattr(hdoc, "days_open", 0) or 0
+                    ai_suggested_reply = getattr(hdoc, "ai_suggested_reply", "") or ""
+                    next_best_action = getattr(hdoc, "next_best_action", "") or ""
                 except Exception:
                     followup_count = 0
                     last_followup_at = ""
                     next_followup_due = ""
                     sla_status = ""
                     days_open = 0
+                    ai_suggested_reply = ""
+                    next_best_action = ""
 
                 # log found handoff
                 try:
@@ -362,6 +366,13 @@ def get_inbox():
                 "next_followup_due": next_followup_due,
                 "sla_status": sla_status,
                 "days_open": days_open,
+
+                "ai_suggested_reply": ai_suggested_reply if handoff_name else "",
+                "next_best_action": next_best_action if handoff_name else "",
+
+                # Backwards-compatible keys expected by the UI
+                "ai_reply": ai_suggested_reply if handoff_name else "",
+                "next_action": next_best_action if handoff_name else "",
 
             "has_handoff":
                 bool(handoff_name),

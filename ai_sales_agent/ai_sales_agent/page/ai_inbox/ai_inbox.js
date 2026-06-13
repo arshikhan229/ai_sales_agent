@@ -121,6 +121,9 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 					+ '<th style="min-width:100px;">Follow-ups</th>'
 					+ '<th style="min-width:160px;">Last Follow-up</th>'
 					+ '<th style="min-width:160px;">Next Due</th>'
+					+ '<th style="min-width:260px;">AI Reply</th>'
+					+ '<th style="min-width:140px;">Next Action</th>'
+					+ '<th style="min-width:120px;">Copilot</th>'
 					+ '<th style="min-width:260px;">Handoff</th>'
 					+ '<th style="min-width:180px;">Assigned</th>'
 					+ '<th style="min-width:80px;text-align:center;">Tasks</th>'
@@ -181,6 +184,28 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 					html += '<td style="min-width:100px;text-align:center;">' + (row.followup_count || 0) + '</td>';
 					html += '<td style="min-width:160px;">' + (row.last_followup_at ? frappe.datetime.str_to_user(row.last_followup_at) : '') + '</td>';
 					html += '<td style="min-width:160px;">' + (row.next_followup_due ? frappe.datetime.str_to_user(row.next_followup_due) : '') + '</td>';
+					// AI Reply column
+					html += '<td style="min-width:260px;white-space:normal;">';
+					if (row.ai_reply) {
+						html += '<div style="background:#f8f9fa;padding:8px;border-radius:6px;margin-bottom:6px;max-height:120px;overflow:auto;">' + $('<div>').text(row.ai_reply).html() + '</div>';
+					} else {
+						html += '<div style="color:#888;">— No suggestion</div>';
+					}
+					if (row.handoff_name) {
+						html += ' <button class="btn btn-sm btn-outline-secondary generate-reply" data-handoff="' + (row.handoff_name || '') + '">Generate AI Reply</button>';
+						html += ' <button class="btn btn-sm btn-outline-primary copy-reply" data-reply="' + (row.ai_reply ? $('<div>').text(row.ai_reply).html() : '') + '">Copy Reply</button>';
+					}
+					html += '</td>';
+					// Next Action column
+					html += '<td style="min-width:140px;">' + (row.next_action || row.next_best_action || '') + '</td>';
+					// Copilot column (Generate button)
+					html += '<td style="min-width:120px;text-align:center;">';
+					if (row.handoff_name) {
+						html += '<button class="btn btn-sm btn-primary generate-ai" data-handoff="' + (row.handoff_name || '') + '">🤖 Generate</button>';
+					} else {
+						html += '<span style="color:#999;">—</span>';
+					}
+					html += '</td>';
 					html += '<td style="min-width:260px;white-space:normal;">' + handoff_html + '</td>';
 					html += '<td style="min-width:180px;white-space:nowrap;">' + (row.assigned_to || '') + '</td>';
 					html += '<td style="min-width:80px;text-align:center;">' + (row.todo_count || 0) + '</td>';
@@ -263,6 +288,94 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 							} else {
 								frappe.msgprint({message: 'Failed to claim lead: ' + (res.message || 'unknown'), indicator: 'red'});
 							}
+						}
+					});
+				});
+
+				// Generate AI Reply -> show modal with suggestion and next action
+				$(page.body).on('click', '.generate-reply', function(e) {
+					e.preventDefault();
+					let handoff = $(this).data('handoff');
+					if (!handoff) return;
+					frappe.call({
+						method: 'ai_sales_agent.ai_sales_agent.utils.sales_copilot.refresh_ai_reply',
+						args: { handoff_name: handoff },
+						callback: function(r) {
+							let res = r.message || {};
+							let reply = (res.reply || '').toString();
+							let action = (res.next_action || res.nextAction || res.next_action) || '';
+							if (reply || action) {
+								let modal_html = '';
+								modal_html += '<div style="max-height:60vh;overflow:auto;">';
+								modal_html += '<h4>AI Suggested Reply</h4>';
+								modal_html += '<div style="background:#f8f9fa;padding:12px;border-radius:6px;margin-bottom:12px;white-space:pre-wrap;">' + $('<div>').text(reply).html() + '</div>';
+								modal_html += '<h5 style="margin-top:6px;">Next Best Action</h5>';
+								modal_html += '<div style="padding:8px 0 0 0;font-weight:600;color:#333;">' + $('<div>').text(action).html() + '</div>';
+								modal_html += '<div style="margin-top:14px;">';
+								modal_html += '<button class="btn btn-primary copy-modal-reply" data-reply="' + $('<div>').text(reply).html() + '">Copy Reply</button> ';
+								modal_html += '<button class="btn btn-default refresh-inbox">Refresh Inbox</button> ';
+								modal_html += '<button class="btn btn-secondary close-modal">Close</button>';
+								modal_html += '</div>';
+								modal_html += '</div>';
+								frappe.msgprint({ title: 'AI Copilot', message: modal_html, wide: true });
+
+								// bind modal button handlers (use delegated to document)
+								$(document).off('click', '.copy-modal-reply').on('click', '.copy-modal-reply', function(ev) {
+									ev.preventDefault();
+									let text = $(this).data('reply') || '';
+									try {
+										navigator.clipboard.writeText($('<div>').html(text).text());
+										frappe.msgprint({message: 'Reply copied to clipboard', indicator: 'green'});
+									} catch (err) {
+										frappe.msgprint({message: 'Unable to copy reply', indicator: 'orange'});
+									}
+								});
+
+								$(document).off('click', '.refresh-inbox').on('click', '.refresh-inbox', function(ev) {
+									ev.preventDefault();
+									load_inbox(page);
+									frappe.hide_msgprint();
+								});
+
+								$(document).off('click', '.close-modal').on('click', '.close-modal', function(ev) {
+									ev.preventDefault();
+									frappe.hide_msgprint();
+								});
+							} else {
+								frappe.msgprint({message: 'Failed to generate AI reply', indicator: 'red'});
+							}
+						}
+					});
+				});
+
+				// Copy reply handler
+				$(page.body).on('click', '.copy-reply', function(e) {
+					e.preventDefault();
+					let text = $(this).data('reply') || '';
+					if (!text) return;
+					try {
+						navigator.clipboard.writeText($('<div>').html(text).text());
+						frappe.msgprint({message: 'Reply copied to clipboard', indicator: 'green'});
+					} catch (err) {
+						frappe.msgprint({message: 'Unable to copy reply', indicator: 'orange'});
+					}
+				});
+
+				// Copilot generate button (compact) - shows suggested reply and next action
+				$(page.body).on('click', '.generate-ai', function(e) {
+					e.preventDefault();
+					let handoff = $(this).data('handoff');
+					if (!handoff) return;
+					frappe.call({
+						method: 'ai_sales_agent.ai_sales_agent.utils.sales_copilot.refresh_ai_reply',
+						args: { handoff_name: handoff },
+						callback: function(r) {
+							let data = r.message || {};
+							frappe.msgprint({
+								title: 'AI Sales Copilot',
+								message: '<b>Suggested Reply</b><hr>' + $('<div>').text(data.reply || '').html() + '<br><br><b>Next Best Action</b><hr>' + $('<div>').text(data.next_action || data.nextAction || data.next_action).html(),
+								wide: true
+							});
 						}
 					});
 				});

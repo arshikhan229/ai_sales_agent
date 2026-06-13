@@ -93,6 +93,17 @@
       "label": "Days Open",
       "default": 0
     }
+    ,
+    {
+      "fieldname": "ai_suggested_reply",
+      "fieldtype": "Long Text",
+      "label": "AI Suggested Reply"
+    },
+    {
+      "fieldname": "next_best_action",
+      "fieldtype": "Data",
+      "label": "Next Best Action"
+    }
   ],
   "permissions": [
     {
