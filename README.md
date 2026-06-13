@@ -47,17 +47,20 @@ This release focuses on improving lead quality, adding a human handoff workflow,
 
 Highlights
 
-- Sales-intent filtering: Heuristics now distinguish sales-focused messages from marketing/newsletter content to reduce false-positive leads.
-- Human handoff workflow: Introduced the `AI Handoff` DocType and the `ai_sales_agent.utils.handoff_rules` utility to decide, create, and assign handoffs when human attention is required.
-- Pipeline integration: `channel_processor` evaluates `should_handoff()` and creates handoffs with idempotent checks and guarded error handling to avoid duplicates and failures.
-- Observability: Added structured audit logging around AI analysis, handoff decisions, and handoff creation to simplify troubleshooting of edge cases.
-- Inbox backend & API: `ai_inbox.py` now returns per-row handoff metadata (`handoff_name`, `handoff_status`, `handoff_assigned_to`, `has_handoff`) and aggregate counters for open/total handoffs.
-- Inbox UI enhancements: `ai_inbox.js` includes KPI cards, interactive filters (Open Handoffs, Assigned To Me, channel/category), and a responsive handoff column featuring badges and links.
-- Developer utility: `debug_inspect_lead(lead_name)` helper available for non-interactive inspection via `bench execute` to reproduce and diagnose problematic leads.
 
 Notes
 
-- Database impact: Adds the `AI Handoff` DocType; no other breaking schema changes expected.
-- Suggested next steps: Move this summary into a dedicated `CHANGELOG.md` and annotate entries with commit SHAs and dates for release tracking.
 
 If you'd like, I can create `CHANGELOG.md` and populate it with commit references and timestamps.
+- Enterprise Reporting (v1.4)
+
+Enterprise Reporting
+--------------------
+
+This module provides a read-only analytics layer on top of ERPNext and AI Sales Agent data. It uses existing doctypes (`AI Lead`, `AI Handoff`, `CRM Conversation`, `Opportunity`) and exposes KPI/Channel/Agent/SLA metrics via whitelisted APIs and a reporting page.
+
+Key files:
+- `ai_sales_agent/reporting/kpi_engine.py` — KPI helper functions
+- `ai_sales_agent/reporting/channel_analytics.py` — Channel-level metrics
+- `ai_sales_agent/reporting/reporting.py` — Whitelisted dashboard APIs
+- `ai_sales_agent/page/ai_reporting/` — Frontend page and JS to render KPIs and charts
