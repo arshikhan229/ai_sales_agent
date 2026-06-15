@@ -1,7 +1,11 @@
 import frappe
+from werkzeug.wrappers import Response
 
 from ai_sales_agent.ai_sales_agent.utils.channel_processor import (
     process_inbound_message,
+)
+from ai_sales_agent.ai_sales_agent.utils.webhook_security import (
+    validate_twilio_request,
 )
 
 
@@ -9,6 +13,16 @@ from ai_sales_agent.ai_sales_agent.utils.channel_processor import (
 def whatsapp_webhook():
 
     try:
+
+        if not validate_twilio_request():
+            frappe.log_error(
+                "Invalid Twilio webhook signature",
+                "WHATSAPP SIGNATURE ERROR",
+            )
+            return Response(
+                response="Forbidden",
+                status=403,
+            )
 
         data = frappe.form_dict
 

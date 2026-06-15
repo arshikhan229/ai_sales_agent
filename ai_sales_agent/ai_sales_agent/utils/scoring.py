@@ -70,6 +70,50 @@ def calculate_icp_score(
     return min(score, 100)
 
 
+HOT_BUYING_INTENTS = (
+    "Pricing Inquiry",
+    "Demo Request",
+)
+
+NON_BUYING_INTENTS = (
+    "Support Request",
+    "Billing Inquiry",
+    "Complaint",
+)
+
+HOT_BUYING_KEYWORDS = (
+    "pricing",
+    "price",
+    "cost",
+    "quotation",
+    "quote",
+    "proposal",
+    "demo",
+    "consultation",
+    "implementation",
+    "erpnext",
+)
+
+
+def has_hot_buying_signal(
+    message="",
+    intent_type="",
+):
+    intent_type = intent_type or ""
+    message = (message or "").lower()
+
+    if intent_type in HOT_BUYING_INTENTS:
+        return True
+
+    if intent_type in NON_BUYING_INTENTS:
+        return False
+
+    return any(
+        keyword in message
+        for keyword in HOT_BUYING_KEYWORDS
+    )
+
+
 def get_lead_category(score):
 
     if score >= 60:

@@ -9,6 +9,7 @@
   "lead_name",
   "email",
   "company",
+  "contact",
   "source",
   "intent_type",
   "message",
@@ -40,6 +41,12 @@
    "fieldname": "company",
    "fieldtype": "Data",
    "label": "Company"
+  },
+  {
+   "fieldname": "contact",
+   "fieldtype": "Link",
+   "label": "Contact",
+   "options": "Contact"
   },
   {
    "fieldname": "source",

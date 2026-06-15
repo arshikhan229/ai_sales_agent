@@ -1,7 +1,13 @@
 BLOCKED_SENDER_PATTERNS = (
     "noreply@",
     "no-reply@",
+    "no_reply@",
+    "donotreply@",
+    "do-not-reply@",
     "notifications@",
+    "notification@",
+    "updates@",
+    "support@",
     "mailer-daemon@",
 )
 
@@ -20,17 +26,30 @@ BLOCKED_DOMAINS = (
 BLOCKED_SUBJECT_KEYWORDS = (
     "newsletter",
     "weekly digest",
+    "digest",
     "unsubscribe",
     "ci failed",
     "workflow run",
     "final reminder",
     "daily digest",
+    "coursera",
+    "quora",
+    "substack",
+    "temu",
+    "notification",
 )
 
 BLOCKED_CONTENT_KEYWORDS = (
+    "newsletter",
+    "digest",
     "unsubscribe",
+    "list-unsubscribe",
     "manage notifications",
     "view in browser",
+    "coursera",
+    "quora digest",
+    "substack",
+    "temu",
 )
 
 SALES_KEYWORDS = (
@@ -48,7 +67,6 @@ SALES_KEYWORDS = (
     "purchase",
     "crm",
     "automation",
-    "support",
     "integration",
     "software",
 )
@@ -68,11 +86,19 @@ def should_process_email(
     sender,
     subject,
     content,
+    headers=None,
 ):
 
     sender = (sender or "").lower().strip()
     subject = (subject or "").lower()
     content = (content or "").lower()
+    header_text = _normalize_headers(headers)
+
+    if "list-unsubscribe" in header_text:
+        return {
+            "process": False,
+            "reason": "list_unsubscribe",
+        }
 
     # Block sender patterns
     for pattern in BLOCKED_SENDER_PATTERNS:
@@ -138,3 +164,16 @@ def should_process_email(
         "process": True,
         "reason": None,
     }
+
+
+def _normalize_headers(headers):
+    if not headers:
+        return ""
+
+    if isinstance(headers, dict):
+        return "\n".join(
+            f"{key}: {value}"
+            for key, value in headers.items()
+        ).lower()
+
+    return str(headers).lower()

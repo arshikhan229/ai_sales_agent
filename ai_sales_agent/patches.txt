@@ -4,3 +4,7 @@
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+ai_sales_agent.ai_sales_agent.patches.stabilize_crm_conversation_links
+ai_sales_agent.ai_sales_agent.patches.cleanup_orphan_handoffs
+ai_sales_agent.ai_sales_agent.patches.cleanup_duplicate_erp_leads
+ai_sales_agent.ai_sales_agent.patches.clear_orphan_handoff_links

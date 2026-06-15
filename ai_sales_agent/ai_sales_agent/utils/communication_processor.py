@@ -37,6 +37,13 @@ def process_communication(doc, method=None):
             or ""
         )
 
+        headers = (
+            getattr(doc, "email_header", None)
+            or getattr(doc, "headers", None)
+            or getattr(doc, "email_headers", None)
+            or ""
+        )
+
         if not content:
             return
 
@@ -47,6 +54,7 @@ def process_communication(doc, method=None):
             message=content,
             email=sender,
             subject=subject,
+            headers=headers,
             communication_doc=doc,
             auto_reply=auto_reply,
             reply_target={

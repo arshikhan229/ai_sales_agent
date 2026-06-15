@@ -4,7 +4,8 @@ from openai import OpenAI
 
 from ai_sales_agent.ai_sales_agent.utils.scoring import (
     calculate_icp_score,
-    get_lead_category
+    get_lead_category,
+    has_hot_buying_signal,
 )
 
 from ai_sales_agent.ai_sales_agent.utils.context_builder import (
@@ -136,11 +137,10 @@ Example:
             company=company
         )
 
-        if normalized_intent in [
-            "Pricing Inquiry",
-            "Demo Request",
-            "Partnership Inquiry"
-        ]:
+        if has_hot_buying_signal(
+            message=message,
+            intent_type=normalized_intent,
+        ) or normalized_intent == "Partnership Inquiry":
             category = "Hot"
 
         elif normalized_intent == "Product Inquiry":
@@ -174,10 +174,21 @@ Example:
             "AI Engine Error"
         )
 
+        score = calculate_icp_score(
+            message=message,
+            email=email,
+            company=company
+        )
+        category = (
+            "Hot"
+            if has_hot_buying_signal(message=message)
+            else get_lead_category(score)
+        )
+
         return {
             "intent_type": "General Inquiry",
             "intent_confidence": 0,
-            "icp_score": 0,
-            "lead_category": "Cold",
+            "icp_score": score,
+            "lead_category": category,
             "reason": "AI analysis failed"
         }

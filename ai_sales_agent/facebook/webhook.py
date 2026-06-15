@@ -4,6 +4,9 @@ from werkzeug.wrappers import Response
 from ai_sales_agent.ai_sales_agent.utils.channel_processor import (
     process_inbound_message,
 )
+from ai_sales_agent.ai_sales_agent.utils.webhook_security import (
+    validate_facebook_request,
+)
 
 
 @frappe.whitelist(allow_guest=True)
@@ -68,12 +71,17 @@ def facebook_webhook():
 
         try:
 
-            data = frappe.request.get_json()
+            if not validate_facebook_request():
+                frappe.log_error(
+                    "Invalid Facebook webhook signature",
+                    "FACEBOOK SIGNATURE ERROR",
+                )
+                return Response(
+                    response="Forbidden",
+                    status=403,
+                )
 
-            frappe.log_error(
-                title="FACEBOOK RAW PAYLOAD",
-                message=frappe.as_json(data)
-            )
+            data = frappe.request.get_json()
 
             if not data:
 

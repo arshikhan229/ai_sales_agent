@@ -1,19 +1,17 @@
 import frappe
 
-
 def log_conversation(
     contact,
     channel,
     direction,
     message,
     ai_reply=None,
-    intent=None
-):
-    """
-    Save conversation into CRM Conversation
-    """
-
+    intent=None,
+    ai_lead=None,
+    erp_lead=None
+    ):
     try:
+
 
         if not contact:
             return None
@@ -26,7 +24,11 @@ def log_conversation(
             "message": message,
             "ai_reply": ai_reply,
             "intent": intent,
-            "timestamp": frappe.utils.now()
+            "timestamp": frappe.utils.now(),
+
+            # AI Sales Agent links
+            "custom_ai_lead": ai_lead,
+            "custom_erp_lead": erp_lead
         })
 
         doc.insert(

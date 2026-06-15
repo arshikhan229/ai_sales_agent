@@ -24,13 +24,7 @@ def claim_handoff(handoff_name):
 
         handoff.save(ignore_permissions=True)
 
-        # Reassign linked ToDo records
-        todos = frappe.get_all(
-            "ToDo",
-            filters={"reference_type": "AI Handoff", "reference_name": handoff.name},
-            fields=["name"],
-        )
-        for t in todos:
+        for t in _get_related_todos(handoff):
             try:
                 td = frappe.get_doc("ToDo", t.name)
                 td.allocated_to = user
@@ -82,21 +76,15 @@ def close_handoff(handoff_name, outcome=None, note=None):
 
         h.save(ignore_permissions=True)
 
-        # mark linked ToDo records as Closed
-        todos = frappe.get_all(
-            "ToDo",
-            filters={"reference_type": "AI Handoff", "reference_name": h.name},
-            fields=["name"],
-        )
-        # Use direct DB updates to avoid schema differences between installs
-        for t in todos:
+        # Use direct DB updates to avoid schema differences between installs.
+        for t in _get_related_todos(h):
             try:
                 # set status column if present
-                if frappe.db.has_column('tabToDo', 'status'):
+                if _has_todo_column("status"):
                     frappe.db.set_value('ToDo', t.name, 'status', 'Closed')
 
                 # set completed flag if present
-                if frappe.db.has_column('tabToDo', 'completed'):
+                if _has_todo_column("completed"):
                     frappe.db.set_value('ToDo', t.name, 'completed', 1)
 
             except Exception:
@@ -123,3 +111,51 @@ def close_handoff(handoff_name, outcome=None, note=None):
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "close_handoff_error")
         return {"status": "error", "message": str(e)}
+
+
+def _get_related_todos(handoff):
+    filters = [
+        [
+            "ToDo",
+            "reference_type",
+            "=",
+            "AI Handoff",
+        ],
+        [
+            "ToDo",
+            "reference_name",
+            "=",
+            handoff.name,
+        ],
+    ]
+
+    todos = {
+        todo.name: todo
+        for todo in frappe.get_all(
+            "ToDo",
+            filters=filters,
+            fields=["name"],
+        )
+    }
+
+    if getattr(handoff, "opportunity", None):
+        opportunity_todos = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": "Opportunity",
+                "reference_name": handoff.opportunity,
+            },
+            fields=["name"],
+        )
+
+        for todo in opportunity_todos:
+            todos[todo.name] = todo
+
+    return list(todos.values())
+
+
+def _has_todo_column(fieldname):
+    try:
+        return frappe.db.has_column("ToDo", fieldname)
+    except Exception:
+        return frappe.db.has_column("tabToDo", fieldname)

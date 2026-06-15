@@ -204,8 +204,6 @@ def process_inbound_message(
             analysis,
         )
 
-        lead.reload()
-
         frappe.logger().info(
             f"CHANNEL PROCESSOR ANALYSIS => "
             f"{channel} : {analysis}"
@@ -604,51 +602,57 @@ def _deliver_reply(
             "detail": "delivery_failed",
         }
 
-    
-    def _result(
-        channel,
-        success=False,
-        skipped=False,
-        skip_reason=None,
-        contact=None,
-        ai_lead=None,
-        erp_lead=None,
-        erp_opportunity=None,
-        analysis=None,
-        reply=None,
-        conversation=None,
-        communication=None,
-        delivery=None,
-        crm_sync=None,
-        error=None,
-    ):
-        if delivery is None:
-            delivery = {
-                "status": "not_applicable",
-                "channel": channel,
-                "detail": None,
-            }
+    return {
+        "status": "not_applicable",
+        "channel": channel,
+        "detail": None,
+    }
 
-        if crm_sync is None:
-            crm_sync = {
-                "triggered": False,
-                "category": None,
-            }
 
-        return {
-            "success": success,
-            "skipped": skipped,
-            "skip_reason": skip_reason,
+def _result(
+    channel,
+    success=False,
+    skipped=False,
+    skip_reason=None,
+    contact=None,
+    ai_lead=None,
+    erp_lead=None,
+    erp_opportunity=None,
+    analysis=None,
+    reply=None,
+    conversation=None,
+    communication=None,
+    delivery=None,
+    crm_sync=None,
+    error=None,
+):
+    if delivery is None:
+        delivery = {
+            "status": "not_applicable",
             "channel": channel,
-            "contact": contact,
-            "ai_lead": ai_lead,
-            "erp_lead": erp_lead,
-            "erp_opportunity": erp_opportunity,
-            "analysis": analysis,
-            "reply": reply,
-            "conversation": conversation,
-            "communication": communication,
-            "delivery": delivery,
-            "crm_sync": crm_sync,
-            "error": error,
+            "detail": None,
         }
+
+    if crm_sync is None:
+        crm_sync = {
+            "triggered": False,
+            "category": None,
+        }
+
+    return {
+        "success": success,
+        "skipped": skipped,
+        "skip_reason": skip_reason,
+        "channel": channel,
+        "contact": contact,
+        "ai_lead": ai_lead,
+        "erp_lead": erp_lead,
+        "erp_opportunity": erp_opportunity,
+        "analysis": analysis,
+        "reply": reply,
+        "conversation": conversation,
+        "communication": communication,
+        "delivery": delivery,
+        "crm_sync": crm_sync,
+        "error": error,
+    }

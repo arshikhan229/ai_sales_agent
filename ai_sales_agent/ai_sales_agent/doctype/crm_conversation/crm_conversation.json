@@ -11,7 +11,9 @@
   "message",
   "ai_reply",
   "intent",
-  "timestamp"
+  "timestamp",
+  "custom_ai_lead",
+  "custom_erp_lead"
  ],
  "fields": [
   {
@@ -51,6 +53,18 @@
    "fieldname": "timestamp",
    "fieldtype": "Datetime",
    "label": "Tmestamp"
+  },
+  {
+   "fieldname": "custom_ai_lead",
+   "fieldtype": "Link",
+   "label": "AI Lead",
+   "options": "AI Lead"
+  },
+  {
+   "fieldname": "custom_erp_lead",
+   "fieldtype": "Link",
+   "label": "ERP Lead",
+   "options": "Lead"
   }
  ],
  "grid_page_length": 50,

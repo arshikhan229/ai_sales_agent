@@ -35,10 +35,11 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 
 	function get_category_badge(category) {
 		if (!category) return "";
-		if (category.includes("Hot")) {
+		category = (category || "").toString();
+		if (category.toLowerCase().includes("hot")) {
 			return '<span style="background:#ffe5e5;color:#a00;padding:6px 12px;border-radius:12px;font-weight:700;">🔥 Hot</span>';
 		}
-		if (category.includes("Warm")) {
+		if (category.toLowerCase().includes("warm")) {
 			return '<span style="background:#fff7e6;color:#a60;padding:6px 12px;border-radius:12px;font-weight:700;">🟡 Warm</span>';
 		}
 		return '<span style="background:#f1f1f1;color:#555;padding:6px 12px;border-radius:12px;font-weight:600;">⚪ Cold</span>';
@@ -71,8 +72,9 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 
 				data.forEach(row => {
 					let category = row.lead_category || "";
-					if (category.includes("Hot")) hot++;
-					else if (category.includes("Warm")) warm++;
+					category = category.toString().toLowerCase();
+					if (category.includes("hot")) hot++;
+					else if (category.includes("warm")) warm++;
 					else cold++;
 					if (row.opportunity) opportunities++;
 					if (row.handoff_assigned_to) assigned_handoffs++;
@@ -134,7 +136,7 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 
 				data.forEach(row => {
 					let rowStyle = '';
-					if ((row.lead_category || '').includes('Hot')) rowStyle = 'background:#fff5f5;';
+					if ((row.lead_category || '').toString().toLowerCase().includes('hot')) rowStyle = 'background:#fff5f5;';
 					if (row.handoff_name) rowStyle += 'border-left:4px solid #ffb74d;';
 
 					// assigned_handoffs counted earlier
@@ -185,7 +187,6 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 					html += '<td style="min-width:350px;max-width:450px;word-break:break-word;">' + (row.preview ? row.preview : ((row.intent || '').substring(0,60))) + '</td>';
 					html += '<td style="min-width:120px;">' + get_category_badge(row.lead_category) + '</td>';
 					html += '<td style="min-width:120px;">' + get_icp_bar(row.icp_score) + '</td>';
-					html += '<td style="min-width:140px;">' + opportunity_html + '</td>';
 					html += '<td style="min-width:140px;">' + opportunity_html + '</td>';
 					html += '<td style="min-width:140px;">' + (row.sla_status || '') + '</td>';
 					html += '<td style="min-width:100px;text-align:center;">' + (row.followup_count || 0) + '</td>';
@@ -639,4 +640,3 @@ ${d.copilot && d.copilot.reply ? d.copilot.reply : ""}
 		});
 
 	}
-

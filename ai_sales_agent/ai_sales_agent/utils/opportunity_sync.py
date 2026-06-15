@@ -9,11 +9,22 @@ def create_opportunity_from_lead(
     if not erpnext_lead:
         return None
 
+    # =================================
+    # ONLY ONE ACTIVE OPPORTUNITY
+    # =================================
+
     existing = frappe.db.exists(
         "Opportunity",
         {
             "opportunity_from": "Lead",
-            "party_name": erpnext_lead.name
+            "party_name": erpnext_lead.name,
+            "status": [
+                "not in",
+                [
+                    "Lost",
+                    "Closed"
+                ]
+            ]
         }
     )
 
@@ -65,7 +76,5 @@ def create_opportunity_from_lead(
     opportunity.insert(
         ignore_permissions=True
     )
-
-    frappe.db.commit()
 
     return opportunity

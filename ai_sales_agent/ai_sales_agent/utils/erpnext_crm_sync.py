@@ -10,9 +10,9 @@ def create_erpnext_lead(ai_lead):
     if not ai_lead:
         return None
 
-    # ==========================
+    # =================================
     # EMAIL MATCH
-    # ==========================
+    # =================================
 
     if ai_lead.email:
 
@@ -37,9 +37,9 @@ def create_erpnext_lead(ai_lead):
 
             return lead
 
-    # ==========================
+    # =================================
     # LEAD NAME MATCH
-    # ==========================
+    # =================================
 
     if ai_lead.lead_name:
 
@@ -64,9 +64,9 @@ def create_erpnext_lead(ai_lead):
 
             return lead
 
-    # ==========================
-    # GET CONTACT PHONE
-    # ==========================
+    # =================================
+    # CONTACT PHONE
+    # =================================
 
     mobile_no = None
 
@@ -78,9 +78,9 @@ def create_erpnext_lead(ai_lead):
             "mobile_no"
         )
 
-    # ==========================
+    # =================================
     # CREATE ERP LEAD
-    # ==========================
+    # =================================
 
     lead = frappe.get_doc({
 
@@ -113,8 +113,6 @@ def create_erpnext_lead(ai_lead):
         ignore_permissions=True
     )
 
-    frappe.db.commit()
-
     return lead
 
 
@@ -144,8 +142,6 @@ def update_mobile_if_missing(
         ignore_permissions=True
     )
 
-    frappe.db.commit()
-
 
 def sync_hot_lead_to_crm(ai_lead):
 
@@ -159,11 +155,19 @@ def sync_hot_lead_to_crm(ai_lead):
     if not erp_lead:
         return None
 
+    opportunity = None
+
     if ai_lead.lead_category == "Hot":
 
-        create_opportunity_from_lead(
+        opportunity = create_opportunity_from_lead(
             erp_lead,
             ai_lead.intent_type
         )
 
-    return erp_lead
+    return {
+        "erp_lead": erp_lead.name,
+        "erp_opportunity":
+            opportunity.name
+            if opportunity
+            else None
+    }

@@ -46,6 +46,28 @@ def get_inbox():
         channel = latest.get("channel", "")
 
         message_preview = (latest.get("message") or "")[:80]
+        # =====================================
+        # DEFAULT VALUES
+        # =====================================
+
+        handoff_name = ""
+        handoff_status = ""
+        handoff_assigned_to = ""
+
+        followup_count = 0
+        last_followup_at = ""
+        next_followup_due = ""
+        sla_status = ""
+
+        days_open = 0
+
+        ai_suggested_reply = ""
+        next_best_action = ""
+
+        has_handoff = False
+
+        assigned_to = ""
+        todo_count = 0
 
         # =====================================
         # HIDE GENERAL INQUIRIES
@@ -166,19 +188,6 @@ def get_inbox():
                 continue
 
             # =====================================
-            # CATEGORY BADGE
-            # =====================================
-
-            if lead_category == "Hot":
-                lead_category = "🔥 Hot"
-
-            elif lead_category == "Warm":
-                lead_category = "🟡 Warm"
-
-            elif lead_category == "Cold":
-                lead_category = "⚪ Cold"
-
-            # =====================================
             # ERP LEAD LOOKUP
             # =====================================
 
@@ -266,8 +275,17 @@ def get_inbox():
         handoff_status = ""
         handoff_assigned_to = ""
 
+        followup_count = 0
+        last_followup_at = ""
+        next_followup_due = ""
+        sla_status = ""
+        days_open = 0
+        ai_suggested_reply = ""
+        next_best_action = ""
+        has_handoff = False
+
         if ai_lead_name:
-            # Audit: log lookup key (AI Lead.name)
+
             try:
                 frappe.logger().info(
                     f"INBOX HANDOFF LOOKUP => lead={ai_lead_name}"
@@ -281,113 +299,107 @@ def get_inbox():
                     ["AI Handoff", "lead", "=", ai_lead_name],
                     ["AI Handoff", "status", "!=", "Closed"],
                 ],
-                fields=["name", "status", "assigned_to"],
+                fields=[
+                    "name",
+                    "status",
+                    "assigned_to"
+                ],
                 limit=1,
             )
 
             if handoffs:
+
                 handoff_name = handoffs[0].get("name") or ""
                 handoff_status = handoffs[0].get("status") or ""
                 handoff_assigned_to = handoffs[0].get("assigned_to") or ""
 
-                # fetch follow-up and SLA fields
                 try:
-                    hdoc = frappe.get_doc("AI Handoff", handoff_name)
-                    followup_count = getattr(hdoc, "followup_count", 0) or 0
-                    last_followup_at = getattr(hdoc, "last_followup_at", "") or ""
-                    next_followup_due = getattr(hdoc, "next_followup_due", "") or ""
-                    sla_status = getattr(hdoc, "sla_status", "") or ""
-                    days_open = getattr(hdoc, "days_open", 0) or 0
-                    ai_suggested_reply = getattr(hdoc, "ai_suggested_reply", "") or ""
-                    next_best_action = getattr(hdoc, "next_best_action", "") or ""
-                except Exception:
-                    followup_count = 0
-                    last_followup_at = ""
-                    next_followup_due = ""
-                    sla_status = ""
-                    days_open = 0
-                    ai_suggested_reply = ""
-                    next_best_action = ""
 
-                # log found handoff
-                try:
-                    frappe.logger().info(
-                        f"FOUND HANDOFF => {handoff_name}"
+                    hdoc = frappe.get_doc(
+                        "AI Handoff",
+                        handoff_name
                     )
-                except Exception:
-                    pass
 
-                # prefer handoff assigned_to over todo assigned
+                    followup_count = getattr(
+                        hdoc,
+                        "followup_count",
+                        0
+                    ) or 0
+
+                    last_followup_at = getattr(
+                        hdoc,
+                        "last_followup_at",
+                        ""
+                    ) or ""
+
+                    next_followup_due = getattr(
+                        hdoc,
+                        "next_followup_due",
+                        ""
+                    ) or ""
+
+                    sla_status = getattr(
+                        hdoc,
+                        "sla_status",
+                        ""
+                    ) or ""
+
+                    days_open = getattr(
+                        hdoc,
+                        "days_open",
+                        0
+                    ) or 0
+
+                    ai_suggested_reply = getattr(
+                        hdoc,
+                        "ai_suggested_reply",
+                        ""
+                    ) or ""
+
+                    next_best_action = getattr(
+                        hdoc,
+                        "next_best_action",
+                        ""
+                    ) or ""
+
+                except Exception:
+                    frappe.log_error(
+                        frappe.get_traceback(),
+                        "AI HANDOFF LOAD ERROR"
+                    )
+
                 if handoff_assigned_to:
                     assigned_to = handoff_assigned_to
+
                 has_handoff = True
-            else:
-                has_handoff = False
 
         results.append({
-
-            "contact":
-                display_contact,
-
-            "actual_contact":
-                row.contact,
-
-            "channel":
-                channel_display,
-
-            "messages":
-                row.total_messages,
-
-            "intent":
-                intent,
-
-            "preview":
-                message_preview,
-
-            "lead_category":
-                lead_category,
-
-            "icp_score":
-                icp_score,
-
-            "opportunity":
-                opportunity,
-
-            "handoff_name":
-                handoff_name,
-
-            "handoff_status":
-                handoff_status,
-
-            "handoff_assigned_to":
-                handoff_assigned_to,
-
-                "followup_count": followup_count,
-                "last_followup_at": last_followup_at,
-                "next_followup_due": next_followup_due,
-                "sla_status": sla_status,
-                "days_open": days_open,
-
-                "ai_suggested_reply": ai_suggested_reply if handoff_name else "",
-                "next_best_action": next_best_action if handoff_name else "",
-
-                # Backwards-compatible keys expected by the UI
-                "ai_reply": ai_suggested_reply if handoff_name else "",
-                "next_action": next_best_action if handoff_name else "",
-
-            "has_handoff":
-                bool(handoff_name),
-
-            "assigned_to":
-                assigned_to,
-
-            "todo_count":
-                todo_count,
-
-            "last_activity":
-                row.last_activity
+            "contact": display_contact,
+            "actual_contact": row.contact,
+            "channel": channel_display,
+            "messages": row.total_messages,
+            "intent": intent,
+            "preview": message_preview,
+            "lead_category": lead_category,
+            "icp_score": icp_score,
+            "opportunity": opportunity,
+            "handoff_name": handoff_name,
+            "handoff_status": handoff_status,
+            "handoff_assigned_to": handoff_assigned_to,
+            "followup_count": followup_count,
+            "last_followup_at": last_followup_at,
+            "next_followup_due": next_followup_due,
+            "sla_status": sla_status,
+            "days_open": days_open,
+            "ai_suggested_reply": ai_suggested_reply,
+            "next_best_action": next_best_action,
+            "ai_reply": ai_suggested_reply,
+            "next_action": next_best_action,
+            "has_handoff": has_handoff,
+            "assigned_to": assigned_to,
+            "todo_count": todo_count,
+            "last_activity": row.last_activity
         })
-
     # =====================================
     # HOT LEADS FIRST
     # =====================================
@@ -438,6 +450,12 @@ def get_inbox():
 @frappe.whitelist()
 def get_contact_timeline(contact):
 
+    timeline = []
+
+    # =====================================
+    # FACEBOOK CONTACT RESOLUTION
+    # =====================================
+
     if contact.startswith("FB_"):
 
         fb_id = contact.replace(
@@ -456,23 +474,166 @@ def get_contact_timeline(contact):
         if actual_contact:
             contact = actual_contact
 
-    return frappe.get_all(
+    # =====================================
+    # CRM CONVERSATIONS
+    # =====================================
+
+    conversations = frappe.get_all(
         "CRM Conversation",
         filters={
             "contact": contact
         },
         fields=[
             "name",
-            "contact",
             "channel",
             "direction",
             "message",
-            "ai_reply",
             "intent",
             "timestamp"
         ],
         order_by="timestamp asc"
     )
+
+    for row in conversations:
+
+        timeline.append({
+            "type": "conversation",
+            "timestamp": row.timestamp,
+            "title": f"{row.channel} {row.direction}",
+            "description": row.message,
+            "reference": row.name
+        })
+
+    # =====================================
+    # AI LEAD
+    # =====================================
+
+    ai_lead = frappe.db.get_value(
+        "AI Lead",
+        {
+            "contact": contact
+        },
+        [
+            "name",
+            "lead_category",
+            "icp_score",
+            "custom_erp_lead",
+            "custom_erp_opportunity",
+            "creation"
+        ],
+        as_dict=True
+    )
+
+    if ai_lead:
+
+        timeline.append({
+            "type": "qualification",
+            "timestamp": ai_lead.creation,
+            "title": "AI Qualified Lead",
+            "description":
+                f"{ai_lead.lead_category} "
+                f"(ICP {ai_lead.icp_score})",
+            "reference": ai_lead.name
+        })
+
+        if ai_lead.custom_erp_lead:
+
+            timeline.append({
+                "type": "erp_lead",
+                "timestamp": ai_lead.creation,
+                "title": "ERP Lead Created",
+                "description":
+                    ai_lead.custom_erp_lead,
+                "reference":
+                    ai_lead.custom_erp_lead
+            })
+
+        if ai_lead.custom_erp_opportunity:
+
+            timeline.append({
+                "type": "opportunity",
+                "timestamp": ai_lead.creation,
+                "title": "Opportunity Created",
+                "description":
+                    ai_lead.custom_erp_opportunity,
+                "reference":
+                    ai_lead.custom_erp_opportunity
+            })
+
+    # =====================================
+    # AI HANDOFFS
+    # =====================================
+
+    handoffs = frappe.get_all(
+        "AI Handoff",
+        filters={
+            "contact": contact
+        },
+        fields=[
+            "name",
+            "assigned_to",
+            "status",
+            "creation"
+        ]
+    )
+
+    for row in handoffs:
+
+        timeline.append({
+            "type": "handoff",
+            "timestamp": row.creation,
+            "title": "Lead Assigned",
+            "description":
+                f"{row.assigned_to} "
+                f"({row.status})",
+            "reference": row.name
+        })
+
+    # =====================================
+    # TODOS
+    # =====================================
+
+    if ai_lead and ai_lead.custom_erp_opportunity:
+
+        todos = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type":
+                    "Opportunity",
+                "reference_name":
+                    ai_lead.custom_erp_opportunity
+            },
+            fields=[
+                "name",
+                "status",
+                "allocated_to",
+                "creation"
+            ]
+        )
+
+        for row in todos:
+
+            timeline.append({
+                "type": "todo",
+                "timestamp": row.creation,
+                "title": "Follow-up Task",
+                "description":
+                    f"{row.allocated_to} "
+                    f"({row.status})",
+                "reference": row.name
+            })
+
+    # =====================================
+    # SORT TIMELINE
+    # =====================================
+
+    timeline.sort(
+        key=lambda x: x["timestamp"]
+        if x["timestamp"] else "",
+        reverse=False
+    )
+
+    return timeline
 
 
 @frappe.whitelist()
@@ -493,11 +654,20 @@ def get_workspace_data(handoff_name):
         )
 
         todos = []
-        if getattr(handoff, "assigned_to", None):
+
+        if handoff.opportunity:
+
             todos = frappe.get_all(
                 "ToDo",
-                filters={"allocated_to": handoff.assigned_to},
-                fields=["name", "description", "status"],
+                filters={
+                    "reference_type": "Opportunity",
+                    "reference_name": handoff.opportunity
+                },
+                fields=[
+                    "name",
+                    "description",
+                    "status"
+                ],
             )
 
         return {
@@ -516,41 +686,41 @@ def get_workspace_data(handoff_name):
 
 
 @frappe.whitelist()
-def get_handoffs(filter_type=None):
-    """Return handoffs for the inbox with simple filters.
+def assign_handoff(
+    handoff,
+    assigned_to=None
+):
 
-    filter_type: Open | Assigned To Me | All
-    """
-    filters = {}
+    if not handoff:
+        return {
+            "success": False,
+            "error": "missing_handoff"
+        }
 
-    if filter_type == "Open":
-        filters["status"] = "Open"
-
-    elif filter_type == "Assigned To Me":
-        filters["assigned_to"] = frappe.session.user
-
-    # else: All (no additional filters)
-
-    handoffs = frappe.get_all(
+    doc = frappe.get_doc(
         "AI Handoff",
-        filters=filters,
-        fields=[
-            "name",
-            "lead",
-            "contact",
-            "channel",
-            "assigned_to",
-            "status",
-            "priority",
-            "opportunity",
-            "creation",
-        ],
-        order_by="creation desc",
-        limit=500,
+        handoff
     )
 
-    return handoffs
+    if not assigned_to:
+        assigned_to = frappe.session.user
 
+    doc.assigned_to = assigned_to
+
+    if doc.status == "Open":
+        doc.status = "Assigned"
+    doc.flags.ignore_version = True
+    doc.save(
+        ignore_permissions=True
+    )
+
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "handoff": doc.name,
+        "assigned_to": assigned_to
+    }
 
 @frappe.whitelist()
 def assign_handoff_to_me(handoff):
@@ -563,6 +733,7 @@ def assign_handoff_to_me(handoff):
     doc = frappe.get_doc("AI Handoff", handoff)
     doc.assigned_to = frappe.session.user
     doc.status = "Assigned"
+    doc.flags.ignore_version = True
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
@@ -576,7 +747,121 @@ def close_handoff(handoff):
 
     doc = frappe.get_doc("AI Handoff", handoff)
     doc.status = "Closed"
+    doc.flags.ignore_version = True
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
     return {"success": True, "handoff": handoff}
+@frappe.whitelist()
+def close_won(handoff):
+
+    if not handoff:
+        return {
+            "success": False,
+            "error": "missing_handoff"
+        }
+
+    doc = frappe.get_doc(
+        "AI Handoff",
+        handoff
+    )
+
+    if doc.opportunity:
+
+        opp = frappe.get_doc(
+            "Opportunity",
+            doc.opportunity
+        )
+
+        opp.reload()
+
+        opp.status = "Converted"
+        doc.flags.ignore_version = True
+        opp.save(
+            ignore_permissions=True
+        )
+
+        todos = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": "Opportunity",
+                "reference_name": opp.name,
+                "status": ["!=", "Closed"]
+            },
+            pluck="name"
+        )
+
+        for todo_name in todos:
+
+            todo = frappe.get_doc(
+                "ToDo",
+                todo_name
+            )
+
+            todo.status = "Closed"
+            doc.flags.ignore_version = True
+
+            todo.save(
+                ignore_permissions=True
+            )
+
+    doc.reload()
+
+    doc.status = "Closed Won"
+    doc.flags.ignore_version = True
+    doc.save(
+        ignore_permissions=True
+    )
+
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "handoff": handoff,
+        "result": "won"
+    }
+@frappe.whitelist()
+def close_lost(handoff):
+
+    if not handoff:
+        return {
+            "success": False,
+            "error": "missing_handoff"
+        }
+
+    doc = frappe.get_doc(
+        "AI Handoff",
+        handoff
+    )
+
+    if doc.opportunity:
+
+        opp = frappe.get_doc(
+            "Opportunity",
+            doc.opportunity
+        )
+
+        opp.reload()
+
+        opp.status = "Lost"
+        doc.flags.ignore_version = True
+        opp.save(
+            ignore_permissions=True
+        )
+
+    doc.reload()
+
+    doc.status = "Closed Lost"
+    
+    doc.flags.ignore_version = True
+    doc.save(
+        ignore_permissions=True
+    )
+
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "handoff": handoff,
+        "result": "lost"
+    }
