@@ -275,9 +275,38 @@ frappe.pages['ai-inbox'].on_page_load = function(wrapper) {
 				});
 
 				$(page.body).find('.open-contact').on('click', function(e) {
+
 					e.preventDefault();
+
 					let contact = $(this).data('contact');
-					open_timeline(contact);
+
+					frappe.call({
+						method:
+						"ai_sales_agent.ai_sales_agent.page.customer_profile.customer_profile.find_customer_by_contact",
+
+						args: {
+							contact: contact
+						},
+
+						callback: function(r) {
+
+							let ai_lead = r.message;
+
+							if (!ai_lead) {
+
+								frappe.msgprint(
+									"Customer profile not found"
+								);
+
+								return;
+							}
+
+							frappe.set_route(
+								"customer-profile",
+								ai_lead
+							);
+						}
+					});
 				});
 
 				// Claim handoff handler

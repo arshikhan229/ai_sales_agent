@@ -1,4 +1,7 @@
 import frappe
+from ai_sales_agent.ai_sales_agent.utils.sales_copilot import (
+    generate_reply
+)
 
 from ai_sales_agent.ai_sales_agent.utils.handoff_engine import (
     create_followup_todo
@@ -125,7 +128,14 @@ def create_handoff(lead, contact, channel, conversation, opportunity, analysis):
         if doc.status != "Closed":
             return name
 
-    assigned = assign_salesperson()
+    from ai_sales_agent.ai_sales_agent.utils.lead_assignment import (
+        assign_lead
+    )
+
+    assigned = assign_lead(
+        lead,
+        opportunity
+    )
 
     handoff = frappe.get_doc({
         "doctype": "AI Handoff",
@@ -165,7 +175,30 @@ def create_handoff(lead, contact, channel, conversation, opportunity, analysis):
 
         frappe.db.commit()
 
-        frappe.logger().info(f"HANDOFF CREATED => {handoff.name}")
+        frappe.db.commit()
+
+        try:
+
+            generate_reply(
+                handoff_name=handoff.name,
+                ai_lead_name=lead
+            )
+
+            frappe.logger().info(
+                f"COPILOT GENERATED => {handoff.name}"
+            )
+
+        except Exception:
+
+            frappe.log_error(
+                frappe.get_traceback(),
+                "COPILOT GENERATION ERROR"
+            )
+
+        frappe.logger().info(
+            f"HANDOFF CREATED => {handoff.name}"
+        )
+
         return handoff.name
 
     except Exception:

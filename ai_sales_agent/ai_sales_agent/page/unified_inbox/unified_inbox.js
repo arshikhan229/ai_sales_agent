@@ -38,7 +38,23 @@ frappe.pages['unified-inbox'].on_page_load = function(wrapper) {
                     html += `
                         <tr>
                             <td>${row.channel || ""}</td>
-                            <td>${row.contact || ""}</td>
+                            <td>
+
+                                ${
+                                    row.ai_lead
+                                    ?
+                                    `
+                                    <a
+                                        href="/app/customer-profile/${row.ai_lead}"
+                                    >
+                                        ${row.contact || ""}
+                                    </a>
+                                    `
+                                    :
+                                    (row.contact || "")
+                                }
+
+                            </td>
                             <td>${row.lead || ""}</td>
                             <td>${row.last_message || ""}</td>
                             <td>${row.last_activity || ""}</td>

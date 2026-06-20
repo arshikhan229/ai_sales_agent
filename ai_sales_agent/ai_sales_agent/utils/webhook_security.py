@@ -17,6 +17,9 @@ def validate_twilio_request(request=None):
         return False
 
     url = getattr(request, "url", "") or ""
+
+    if url.startswith("http://"):
+        url = url.replace("http://", "https://", 1)
     form = getattr(request, "form", None) or {}
     payload = url + "".join(
         f"{key}{form.get(key)}"
@@ -29,8 +32,27 @@ def validate_twilio_request(request=None):
         hashlib.sha1,
     ).digest()
 
-    expected = base64.b64encode(digest).decode("ascii")
-    return hmac.compare_digest(signature, expected)
+    expected = base64.b64encode(
+        digest
+    ).decode("ascii")
+
+    frappe.log_error(
+        f"""
+    URL={url}
+
+    SIGNATURE={signature}
+
+    EXPECTED={expected}
+
+    FORM={dict(form)}
+    """,
+        "TWILIO DEBUG"
+    )
+
+    return hmac.compare_digest(
+        signature,
+        expected
+    )
 
 
 def validate_facebook_request(request=None):
