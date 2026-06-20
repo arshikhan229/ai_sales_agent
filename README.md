@@ -1,66 +1,239 @@
-### Ai Sales Agent
+# AI Sales Agent for ERPNext CRM
 
-ai sale agent
+An Enterprise AI-Powered CRM Automation Platform built on ERPNext and Frappe.
 
-### Installation
+AI Sales Agent unifies Facebook Messenger, WhatsApp, Email, and Voice interactions into a single intelligent CRM experience. The platform automatically captures leads, qualifies prospects, scores opportunities, assists sales teams, and synchronizes customer data with ERPNext CRM.
 
-You can install this app using the [bench](https://github.com/frappe/bench) CLI:
+---
 
-```bash
-cd $PATH_TO_YOUR_BENCH
-bench get-app $URL_OF_THIS_REPO --branch develop
-bench install-app ai_sales_agent
+## Features
+
+### Omnichannel Communication
+
+* Facebook Messenger Integration
+* WhatsApp Integration
+* Email Integration
+* Voice Call Integration
+* Unified Inbox
+* Conversation Tracking
+
+### AI Lead Management
+
+* AI Lead Qualification
+* Lead Scoring
+* Intent Detection
+* Customer Identity Resolution
+* Automated Follow-Up Generation
+* Lead Assignment Automation
+
+### CRM Intelligence
+
+* Customer 360 View
+* Opportunity 360 Dashboard
+* Deal Intelligence
+* Opportunity Valuation
+* Revenue Forecasting
+* Omnichannel Timeline
+
+### Sales Copilot
+
+* AI-Powered Sales Assistance
+* Smart Reply Suggestions
+* Context-Aware Recommendations
+* Opportunity Insights
+* Next Best Action Suggestions
+
+### Human Handoff
+
+* AI-to-Human Escalation
+* Supervisor Queue
+* SLA Monitoring
+* Workforce Management
+* Handoff Tracking
+
+### Reporting & Analytics
+
+* KPI Dashboard
+* Channel Analytics
+* Revenue Forecasting
+* Workforce Performance Metrics
+* Sales Performance Reporting
+
+---
+
+## Architecture
+
+```text
+Facebook Messenger
+WhatsApp
+Email
+Voice Calls
+        │
+        ▼
+Communication Layer
+        │
+        ▼
+Customer Identity Resolution
+        │
+        ▼
+AI Lead Qualification Engine
+        │
+        ▼
+CRM Conversation Management
+        │
+        ▼
+ERPNext CRM Synchronization
+        │
+        ▼
+Sales Copilot & Analytics
 ```
 
-### Contributing
+---
 
-This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:
+## Core Components
+
+### DocTypes
+
+| DocType             | Purpose                          |
+| ------------------- | -------------------------------- |
+| AI Lead             | AI-managed lead records          |
+| AI Lead Interaction | Lead engagement tracking         |
+| CRM Conversation    | Omnichannel conversation history |
+| AI Handoff          | AI-to-human escalation           |
+| AI Settings         | System configuration             |
+
+---
+
+### AI Engines
+
+* Qualification Engine
+* Intent Engine
+* Scoring Engine
+* Context Builder
+* Deal Intelligence Engine
+* Follow-Up Generator
+* Notification Engine
+* Routing Engine
+
+---
+
+## Technology Stack
+
+### Backend
+
+* Python
+* Frappe Framework
+* ERPNext
+
+### AI & Automation
+
+* OpenAI
+* LangChain (optional)
+* Custom AI Workflows
+
+### Communication Channels
+
+* Facebook Graph API
+* WhatsApp Cloud API
+* Twilio Voice
+* SMTP Email
+
+---
+
+## Installation
 
 ```bash
-cd apps/ai_sales_agent
-pre-commit install
+cd frappe-bench/apps
+
+git clone https://github.com/arshikhan229/ai_sales_agent.git
+
+bench get-app ai_sales_agent
+
+bench --site your-site install-app ai_sales_agent
 ```
 
-Pre-commit is configured to use the following tools for checking and formatting your code:
+---
 
-- ruff
-- eslint
-- prettier
-- pyupgrade
+## Project Structure
 
-### CI
+```text
+ai_sales_agent/
+├── doctype/
+├── inbox/
+├── reporting/
+├── utils/
+├── whatsapp/
+├── voice/
+├── facebook/
+├── workforce/
+├── followup/
+├── customer_identity/
+└── page/
+```
 
-This app can use GitHub Actions for CI. The following workflows are configured:
+---
 
-- CI: Installs this app and runs unit tests on every push to `develop` branch.
-- Linters: Runs [Frappe Semgrep Rules](https://github.com/frappe/semgrep-rules) and [pip-audit](https://pypi.org/project/pip-audit/) on every pull request.
+## Key Business Benefits
 
+* Increase Lead Conversion Rate
+* Reduce Sales Response Time
+* Improve Customer Engagement
+* Centralize Omnichannel Communications
+* Automate Lead Qualification
+* Improve Forecast Accuracy
+* Enhance Sales Productivity
 
-### License
+---
 
-mit
+## Security
 
-## Recent Work / Changelog
-Summary of recent improvements (v0.9 — stabilization):
+* Webhook Signature Validation
+* Secure CRM Data Handling
+* ERPNext Role-Based Access Control
+* Human Approval Workflows
+* Audit Logging
 
-This release focuses on improving lead quality, adding a human handoff workflow, and increasing observability in the inbox.
+---
 
-Highlights
+## Roadmap
 
+### Phase 1
 
-Notes
+* Omnichannel Inbox
+* AI Lead Qualification
+* ERPNext Synchronization
 
+### Phase 2
 
-If you'd like, I can create `CHANGELOG.md` and populate it with commit references and timestamps.
-- Enterprise Reporting (v1.4)
+* Customer 360
+* Opportunity 360
+* Revenue Forecasting
 
-Enterprise Reporting
---------------------
+### Phase 3
 
-This module provides a read-only analytics layer on top of ERPNext and AI Sales Agent data. It uses existing doctypes (`AI Lead`, `AI Handoff`, `CRM Conversation`, `Opportunity`) and exposes KPI/Channel/Agent/SLA metrics via whitelisted APIs and a reporting page.
+* Advanced AI Sales Copilot
+* Predictive Opportunity Scoring
+* Pipeline Risk Detection
+* Workforce Optimization
 
-Key files:
-- `ai_sales_agent/reporting/kpi_engine.py` — KPI helper functions
-- `ai_sales_agent/reporting/channel_analytics.py` — Channel-level metrics
-- `ai_sales_agent/reporting/reporting.py` — Whitelisted dashboard APIs
-- `ai_sales_agent/page/ai_reporting/` — Frontend page and JS to render KPIs and charts
+---
+
+## Contributing
+
+Contributions, bug reports, feature requests, and pull requests are welcome.
+
+---
+
+## License
+
+MIT License
+
+---
+
+## Author
+
+**Arshi Khan**
+
+AI Engineer
+
+Building Enterprise AI Systems, CRM Automation, Intelligent Document Processing, AI Agents, and ERPNext Solutions.
